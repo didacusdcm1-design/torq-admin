@@ -23,15 +23,21 @@ const Sidebar = () => {
         <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
           <span>⌂</span> <span>Dashboard</span>
         </Link>
+        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>♧</span> <span>Trip Management</span>
+        </Link>
         <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♙</span> <span>Customers</span>
         </Link>
         <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♟</span> <span>Riders</span>
         </Link>
+        <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>⌖</span> <span>Live Map</span>
+        </Link>
       </nav>
       <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
-        🟢 System Operational
+        🟢 System Operational<br/><br/>TORQ Admin • Live Data
       </div>
     </aside>
   );
