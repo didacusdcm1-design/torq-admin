@@ -5,7 +5,6 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Doughnut, Bar } from 'react-chartjs-2';
 import dynamic from 'next/dynamic';
 
-// Load Map dynamically to prevent SSR errors
 const MapWithNoSSR = dynamic(() => import('./MapComponent'), { ssr: false });
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -35,10 +34,22 @@ const navItems = [
 
 export default function AdminDashboard() {
   const [date, setDate] = useState("");
-  
-  // Fix: Only set the date on the client side to avoid hydration mismatch
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setDate(new Date().toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}));
+    
+    fetch('https://torq-backend.onrender.com/trips/admin/all')
+      .then(res => res.json())
+      .then(data => {
+        setTrips(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch trips:", err);
+        setLoading(false);
+      });
   }, []);
 
   const donutData = {
@@ -51,7 +62,6 @@ export default function AdminDashboard() {
     datasets: [{ data: [330,370,440,370,490,560,630], backgroundColor: '#ffb91c', borderRadius: 4 }]
   };
 
-  // Fixed static percentages to prevent hydration mismatch
   const kpis = [
     { icon: "🏍", label: "Total Trips (Today)", val: "842", trend: "12%" },
     { icon: "♟", label: "Active Riders", val: "236", trend: "8%" },
@@ -63,7 +73,6 @@ export default function AdminDashboard() {
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
       
-      {/* SIDEBAR */}
       <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0">
         <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
           <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
@@ -82,11 +91,10 @@ export default function AdminDashboard() {
         </nav>
         
         <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
-          🟢 System Operational<br/><br/>TORQ Admin • Demo UI
+          🟢 System Operational<br/><br/>TORQ Admin • Live Data
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 overflow-y-auto p-5">
         <header className="h-14 bg-[#101822] text-white rounded-lg flex items-center justify-between px-4 mb-5">
           <button className="text-xl">☰</button>
@@ -107,7 +115,6 @@ export default function AdminDashboard() {
           <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm">{date}</div>
         </div>
 
-        {/* KPI CARDS */}
         <section className="grid grid-cols-5 gap-3 mb-3">
           {kpis.map((kpi, i) => (
             <div key={i} className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
@@ -123,7 +130,6 @@ export default function AdminDashboard() {
           ))}
         </section>
 
-        {/* CHARTS & MAP */}
         <section className="grid grid-cols-[1.55fr_1fr] gap-3 mb-3">
           <div className="bg-white border border-[#dfe7f1] rounded-xl p-3 shadow-sm">
             <div className="flex justify-between mb-3">
@@ -158,18 +164,38 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        {/* TABLES */}
         <section className="grid grid-cols-[1.55fr_1fr] gap-3 mb-3">
           <div className="bg-white border border-[#dfe7f1] rounded-xl p-3 shadow-sm overflow-hidden">
-            <div className="flex justify-between mb-3"><b className="text-sm">Recent Trips</b><button className="text-xs text-blue-600">View all ›</button></div>
+            <div className="flex justify-between mb-3"><b className="text-sm">Recent Trips (Live from Database)</b><button className="text-xs text-blue-600">View all ›</button></div>
             <div className="overflow-x-auto">
               <table className="w-full whitespace-nowrap text-left">
-                <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px]"><th className="p-3">Trip #</th><th className="p-3">Customer</th><th className="p-3">Rider</th><th className="p-3">Pickup</th><th className="p-3">Destination</th><th className="p-3">Fare</th><th className="p-3">Status</th><th className="p-3">Time</th></tr></thead>
+                <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px]"><th className="p-3">Trip #</th><th className="p-3">Customer</th><th className="p-3">Rider</th><th className="p-3">Pickup Lat/Lng</th><th className="p-3">Destination Lat/Lng</th><th className="p-3">Fare</th><th className="p-3">Status</th></tr></thead>
                 <tbody>
-                  <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">TRP-7842</td><td className="p-3">Grace Wanjiku</td><td className="p-3">Brian Otieno</td><td className="p-3">Westlands</td><td className="p-3">Kileleshwa</td><td className="p-3">KSh 280</td><td className="p-3"><span className="bg-[#dcfce7] text-[#15803d] px-2 py-1 rounded-full text-[9px] font-bold">Completed</span></td><td className="p-3">10:42 AM</td></tr>
-                  <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">TRP-7841</td><td className="p-3">James Mwangi</td><td className="p-3">Peter Njoroge</td><td className="p-3">CBD</td><td className="p-3">Upper Hill</td><td className="p-3">KSh 150</td><td className="p-3"><span className="bg-[#dbeafe] text-[#1d4ed8] px-2 py-1 rounded-full text-[9px] font-bold">In Progress</span></td><td className="p-3">10:38 AM</td></tr>
-                  <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">TRP-7840</td><td className="p-3">Amina Hassan</td><td className="p-3">Daniel Mutua</td><td className="p-3">Kibera</td><td className="p-3">Westlands</td><td className="p-3">KSh 320</td><td className="p-3"><span className="bg-[#dcfce7] text-[#15803d] px-2 py-1 rounded-full text-[9px] font-bold">Completed</span></td><td className="p-3">10:35 AM</td></tr>
-                  <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">TRP-7839</td><td className="p-3">Collins Ochieng</td><td className="p-3">Samuel Kimani</td><td className="p-3">Mathare</td><td className="p-3">CBD</td><td className="p-3">KSh 180</td><td className="p-3"><span className="bg-[#fef3c7] text-[#a16207] px-2 py-1 rounded-full text-[9px] font-bold">Pending</span></td><td className="p-3">10:31 AM</td></tr>
+                  {loading ? (
+                    <tr><td colSpan={7} className="p-3 text-center text-slate-500">Loading live trips...</td></tr>
+                  ) : trips.length === 0 ? (
+                    <tr><td colSpan={7} className="p-3 text-center text-slate-500">No trips found in the database yet.</td></tr>
+                  ) : (
+                    trips.map((trip) => (
+                      <tr key={trip.id} className="border-t border-[#edf1f6] text-[10px]">
+                        <td className="p-3">{trip.id.substring(0, 8)}</td>
+                        <td className="p-3">{trip.customer?.email || 'N/A'}</td>
+                        <td className="p-3">{trip.rider?.email || 'Pending'}</td>
+                        <td className="p-3">{trip.pickupLat.toFixed(2)}, {trip.pickupLng.toFixed(2)}</td>
+                        <td className="p-3">{trip.dropoffLat.toFixed(2)}, {trip.dropoffLng.toFixed(2)}</td>
+                        <td className="p-3">KSh {trip.estimatedFare}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-bold ${
+                            trip.status === 'COMPLETED' ? 'bg-[#dcfce7] text-[#15803d]' : 
+                            trip.status === 'IN_PROGRESS' ? 'bg-[#dbeafe] text-[#1d4ed8]' : 
+                            'bg-[#fef3c7] text-[#a16207]'
+                          }`}>
+                            {trip.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
