@@ -1,37 +1,14 @@
-﻿import Sidebar from './components/Sidebar';
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import dynamic from 'next/dynamic';
+import Sidebar from './components/Sidebar';
 
 const MapWithNoSSR = dynamic(() => import('./MapComponent'), { ssr: false });
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
-
-const navItems = [
-  { icon: "⌂", label: "Dashboard", active: true },
-  { icon: "♧", label: "Trip Management" },
-  { icon: "♙", label: "Customers" },
-  { icon: "♟", label: "Riders" },
-  { icon: "⌖", label: "Live Map" },
-  { icon: "⚿", label: "Motorcycles & Documents" },
-  { icon: "◷", label: "Dispatch & Availability" },
-  { icon: "▣", label: "Fare & Pricing" },
-  { icon: "◎", label: "Revenue & Commissions" },
-  { icon: "▤", label: "Payments & Reconciliation" },
-  { icon: "♧", label: "Rider Earnings & Payouts" },
-  { icon: "◉", label: "Cancellations & Refunds" },
-  { icon: "✉", label: "Support & Complaints" },
-  { icon: "⚠", label: "Safety & Incidents" },
-  { icon: "☆", label: "Ratings & Reviews" },
-  { icon: "♧", label: "Counties & Zones" },
-  { icon: "▦", label: "Google Sheets Sync" },
-  { icon: "▧", label: "Reports" },
-  { icon: "♙", label: "Staff & Permissions" },
-  { icon: "♥", label: "System Health" },
-];
 
 export default function AdminDashboard() {
   const [date, setDate] = useState("");
@@ -73,9 +50,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
-      
       <Sidebar />
-
       <main className="flex-1 overflow-y-auto p-5">
         <header className="h-14 bg-[#101822] text-white rounded-lg flex items-center justify-between px-4 mb-5">
           <button className="text-xl">☰</button>
@@ -198,5 +173,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-
