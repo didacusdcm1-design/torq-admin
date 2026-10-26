@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                   ) : trips.length === 0 ? (
                     <tr><td colSpan={7} className="p-3 text-center text-slate-500">No trips found in the database yet.</td></tr>
                   ) : (
-                    trips.map((trip) => (
+                    trips.map((trip: any) => (
                       <tr key={trip.id} className="border-t border-[#edf1f6] text-[10px]">
                         <td className="p-3">{trip.id.substring(0, 8)}</td>
                         <td className="p-3">{trip.customer?.email || 'N/A'}</td>

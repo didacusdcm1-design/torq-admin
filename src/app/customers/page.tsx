@@ -15,7 +15,7 @@ export default function CustomersPage() {
       .catch(err => { console.error(err); setLoading(false); });
   }, []);
 
-  const filteredCustomers = users.filter(u => u.email?.toLowerCase().includes(search.toLowerCase()));
+  const filteredCustomers = users.filter(u => (u.email || "").toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
@@ -33,7 +33,7 @@ export default function CustomersPage() {
             <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]"><th className="p-4 font-bold">Customer ID</th><th className="p-4 font-bold">Email</th><th className="p-4 font-bold">Phone</th><th className="p-4 font-bold">Joined</th><th className="p-4 font-bold">Status</th></tr></thead>
             <tbody>
               {loading ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading customers...</td></tr> ) : filteredCustomers.length === 0 ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">No customers found.</td></tr> ) : (
-                filteredCustomers.map((user) => (
+                filteredCustomers.map((user: any) => (
                   <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
                     <td className="p-4 font-mono text-gray-500">{user.id.substring(0, 8)}</td>
                     <td className="p-4 font-semibold">{user.email}</td>
@@ -50,3 +50,4 @@ export default function CustomersPage() {
     </div>
   );
 }
+
