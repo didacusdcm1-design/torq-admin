@@ -84,7 +84,7 @@ export default function AdminDashboard() {
         
         <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
           {navItems.map((item, i) => (
-            <a key={i} href="#" className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${item.active ? 'bg-[#ffbd19] text-[#101827]' : 'text-[#d6deea] hover:bg-[#202b39]'}`}>
+            <a key={i} href={item.label === "Riders" ? "/users" : "#"} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${item.active ? 'bg-[#ffbd19] text-[#101827]' : 'text-[#d6deea] hover:bg-[#202b39]'}`}>
               <span>{item.icon}</span> <span>{item.label}</span>
             </a>
           ))}
@@ -217,3 +217,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
