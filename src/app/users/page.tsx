@@ -22,6 +22,46 @@ export default function UsersPage() {
   }, []);
 
   const filteredUsers = users.filter(u => u.email?.toLowerCase().includes(search.toLowerCase()));
+  const riders = filteredUsers.filter(u => u.role === 'RIDER');
+  const customers = filteredUsers.filter(u => u.role === 'CUSTOMER');
+
+  const UserTable = ({ title, data, roleColor }: { title: string, data: any[], roleColor: string }) => (
+    <div className="bg-white border border-[#dfe7f1] rounded-xl shadow-sm overflow-hidden mb-8">
+      <div className="p-4 border-b border-[#dfe7f1] bg-[#f7f9fc]">
+        <h2 className="text-sm font-bold text-[#51627d] uppercase tracking-wider">{title} ({data.length})</h2>
+      </div>
+      <table className="w-full text-left whitespace-nowrap">
+        <thead>
+          <tr className="bg-white text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]">
+            <th className="p-4 font-bold">User ID</th>
+            <th className="p-4 font-bold">Email</th>
+            <th className="p-4 font-bold">Phone</th>
+            <th className="p-4 font-bold">Role</th>
+            <th className="p-4 font-bold">Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.length === 0 ? (
+            <tr><td colSpan={5} className="p-8 text-center text-slate-500">No {title.toLowerCase()} found.</td></tr>
+          ) : (
+            data.map((user) => (
+              <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
+                <td className="p-4 font-mono text-gray-500">{user.id.substring(0, 8)}</td>
+                <td className="p-4 font-semibold">{user.email}</td>
+                <td className="p-4">{user.phone || 'N/A'}</td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${roleColor}`}>
+                    {user.role}
+                  </span>
+                </td>
+                <td className="p-4 text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
@@ -45,7 +85,7 @@ export default function UsersPage() {
 
       <main className="flex-1 overflow-y-auto p-5">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-extrabold">Riders & Customers</h1>
+          <h1 className="text-2xl font-extrabold">User Management</h1>
           <div className="relative w-72">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
             <input 
@@ -57,44 +97,14 @@ export default function UsersPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-[#dfe7f1] rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-left whitespace-nowrap">
-            <thead>
-              <tr className="bg-[#f7f9fc] text-[#51627d] text-[10px] uppercase">
-                <th className="p-4 font-bold">User ID</th>
-                <th className="p-4 font-bold">Email</th>
-                <th className="p-4 font-bold">Phone</th>
-                <th className="p-4 font-bold">Role</th>
-                <th className="p-4 font-bold">Joined</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading users...</td></tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={5} className="p-8 text-center text-slate-500">No users found.</td></tr>
-              ) : (
-                filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
-                    <td className="p-4 font-mono text-gray-500">{user.id.substring(0, 8)}</td>
-                    <td className="p-4 font-semibold">{user.email}</td>
-                    <td className="p-4">{user.phone || 'N/A'}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                        user.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-700' : 
-                        user.role === 'RIDER' ? 'bg-green-100 text-green-700' : 
-                        'bg-purple-100 text-purple-700'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="p-4 text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="text-center py-20 text-slate-500">Loading database users...</div>
+        ) : (
+          <>
+            <UserTable title="Riders" data={riders} roleColor="bg-green-100 text-green-700" />
+            <UserTable title="Customers" data={customers} roleColor="bg-blue-100 text-blue-700" />
+          </>
+        )}
       </main>
     </div>
   );
