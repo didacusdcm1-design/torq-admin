@@ -11,8 +11,6 @@ const navItems = [
   { icon: "⚿", label: "Motorcycles & Documents", path: "/documents" },
   { icon: "◷", label: "Dispatch & Availability", path: "/dispatch" },
   { icon: "▣", label: "Fare & Pricing", path: "/pricing" },
-  { icon: "◎", label: "Revenue & Commissions", path: "/revenue" },
-  { icon: "▤", label: "Payments & Reconciliation", path: "/payments" },
 ];
 
 export default function Sidebar() {
