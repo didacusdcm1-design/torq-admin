@@ -1,7 +1,27 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
 import { Search } from "lucide-react";
+import Link from "next/link";
+
+const Sidebar = () => (
+  <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0 h-screen">
+    <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
+      <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
+      <div>
+        <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
+        <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
+      </div>
+    </div>
+    <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
+      <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">⌂ Dashboard</Link>
+      <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">♧ Trip Management</Link>
+      <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">♙ Customers</Link>
+      <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">♙ Customers</Link>
+      <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">⌖ Live Map</Link>
+    </nav>
+    <div className="p-4 border-t border-slate-700 text-xs text-slate-400">🟢 System Operational</div>
+  </aside>
+);
 
 export default function CustomersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -32,7 +52,7 @@ export default function CustomersPage() {
           <table className="w-full text-left whitespace-nowrap">
             <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]"><th className="p-4 font-bold">Customer ID</th><th className="p-4 font-bold">Email</th><th className="p-4 font-bold">Phone</th><th className="p-4 font-bold">Joined</th><th className="p-4 font-bold">Status</th></tr></thead>
             <tbody>
-              {loading ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading customers...</td></tr> ) : filteredCustomers.length === 0 ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">No customers found.</td></tr> ) : (
+              {loading ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading riders...</td></tr> ) : filteredCustomers.length === 0 ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">No riders found.</td></tr> ) : (
                 filteredCustomers.map((user: any) => (
                   <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
                     <td className="p-4 font-mono text-gray-500">{user.id.substring(0, 8)}</td>
@@ -50,4 +70,3 @@ export default function CustomersPage() {
     </div>
   );
 }
-
