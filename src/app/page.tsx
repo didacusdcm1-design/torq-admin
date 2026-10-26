@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import Sidebar from './components/Sidebar';
+"use client";
 
 import { useEffect, useState } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
@@ -73,27 +74,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
       
-      <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0">
-        <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
-          <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
-          <div>
-            <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
-            <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
-          </div>
-        </div>
-        
-        <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
-          {navItems.map((item, i) => (
-            <a key={i} href={item.label === "Riders" ? "/users" : "#"} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${item.active ? 'bg-[#ffbd19] text-[#101827]' : 'text-[#d6deea] hover:bg-[#202b39]'}`}>
-              <span>{item.icon}</span> <span>{item.label}</span>
-            </a>
-          ))}
-        </nav>
-        
-        <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
-          🟢 System Operational<br/><br/>TORQ Admin • Live Data
-        </div>
-      </aside>
+      <Sidebar />
 
       <main className="flex-1 overflow-y-auto p-5">
         <header className="h-14 bg-[#101822] text-white rounded-lg flex items-center justify-between px-4 mb-5">
@@ -217,4 +198,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
 
