@@ -56,7 +56,6 @@ export default function LiveMapPage() {
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
 
-  // Filter trips to only show active/requested ones on the map
   const activeTrips = trips?.filter((t: any) => ['REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(t.status)) || [];
 
   return (
