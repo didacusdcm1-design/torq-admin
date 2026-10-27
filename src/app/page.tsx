@@ -1,10 +1,12 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import dynamic from 'next/dynamic';
 import Link from "next/link";
+import { RefreshCw } from "lucide-react";
 
 const MapWithNoSSR = dynamic(() => import('./MapComponent'), { ssr: false });
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -23,17 +25,11 @@ const Sidebar = () => {
         <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
           <span>⌂</span> <span>Dashboard</span>
         </Link>
-        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♧</span> <span>Trip Management</span>
-        </Link>
         <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♙</span> <span>Customers</span>
         </Link>
         <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♟</span> <span>Riders</span>
-        </Link>
-        <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>⌖</span> <span>Live Map</span>
         </Link>
       </nav>
       <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
@@ -45,23 +41,22 @@ const Sidebar = () => {
 
 export default function AdminDashboard() {
   const [date, setDate] = useState("");
-  const [trips, setTrips] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     setDate(new Date().toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}));
-    
-    fetch('https://torq-backend.onrender.com/trips/admin/all')
-      .then(res => res.json())
-      .then(data => {
-        setTrips(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch trips:", err);
-        setLoading(false);
-      });
   }, []);
+
+  // The 30-second auto-refresh logic
+  const { data: stats, isLoading, isError, dataUpdatedAt } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const res = await fetch('https://torq-backend.onrender.com/admin/dashboard-stats');
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    },
+  });
+
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
 
   const donutData = {
     labels: ['Completed','In Progress','Pending','Cancelled'],
@@ -72,14 +67,6 @@ export default function AdminDashboard() {
     labels: ['Apr 19','Apr 20','Apr 21','Apr 22','Apr 23','Apr 24','Apr 25'],
     datasets: [{ data: [330,370,440,370,490,560,630], backgroundColor: '#ffb91c', borderRadius: 4 }]
   };
-
-  const kpis = [
-    { icon: "🏍", label: "Total Trips (Today)", val: "842", trend: "12%" },
-    { icon: "♟", label: "Active Riders", val: "236", trend: "8%" },
-    { icon: "♙", label: "Active Customers", val: "4,892", trend: "15%" },
-    { icon: "KSh", label: "Total Revenue (Today)", val: "412,560", trend: "18%" },
-    { icon: "★", label: "Average Rating", val: "4.7", trend: "2%" }
-  ];
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
@@ -101,22 +88,76 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-extrabold">Dashboard</h1>
             <p className="text-xs text-slate-500 mt-1">Welcome back, Admin. Here's what's happening with TORQ today.</p>
           </div>
-          <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm">{date}</div>
+          <div className="flex items-center gap-4">
+            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm flex items-center gap-2">
+              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
+              Last updated: {lastUpdated}
+            </div>
+            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm">{date}</div>
+          </div>
         </div>
 
+        {isError && (
+          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-sm">
+            Failed to connect to the backend. Please check your Render server.
+          </div>
+        )}
+
         <section className="grid grid-cols-5 gap-3 mb-3">
-          {kpis.map((kpi, i) => (
-            <div key={i} className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-              <div className="flex gap-3 items-center">
-                <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">{kpi.icon}</div>
-                <div>
-                  <div className="text-[11px] text-slate-500">{kpi.label}</div>
-                  <b className="text-2xl">{kpi.val}</b>
-                </div>
+          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
+            <div className="flex gap-3 items-center">
+              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">🏍</div>
+              <div>
+                <div className="text-[11px] text-slate-500">Total Trips (Today)</div>
+                <b className="text-2xl">{isLoading ? "..." : stats?.totalTripsToday || 0}</b>
               </div>
-              <p className="text-[10px] text-green-600 mt-2">↑ {kpi.trend} <span className="text-slate-400">vs yesterday</span></p>
             </div>
-          ))}
+            <p className="text-[10px] text-green-600 mt-2">↑ 12% <span className="text-slate-400">vs yesterday</span></p>
+          </div>
+
+          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
+            <div className="flex gap-3 items-center">
+              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">♟</div>
+              <div>
+                <div className="text-[11px] text-slate-500">Active Riders</div>
+                <b className="text-2xl">{isLoading ? "..." : stats?.activeRiders || 0}</b>
+              </div>
+            </div>
+            <p className="text-[10px] text-green-600 mt-2">↑ 8% <span className="text-slate-400">vs yesterday</span></p>
+          </div>
+
+          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
+            <div className="flex gap-3 items-center">
+              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">♙</div>
+              <div>
+                <div className="text-[11px] text-slate-500">Active Customers</div>
+                <b className="text-2xl">{isLoading ? "..." : stats?.activeCustomers || 0}</b>
+              </div>
+            </div>
+            <p className="text-[10px] text-green-600 mt-2">↑ 15% <span className="text-slate-400">vs yesterday</span></p>
+          </div>
+
+          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
+            <div className="flex gap-3 items-center">
+              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">KSh</div>
+              <div>
+                <div className="text-[11px] text-slate-500">Total Revenue (Today)</div>
+                <b className="text-2xl">{isLoading ? "..." : (stats?.revenueToday || 0).toLocaleString()}</b>
+              </div>
+            </div>
+            <p className="text-[10px] text-green-600 mt-2">↑ 18% <span className="text-slate-400">vs yesterday</span></p>
+          </div>
+
+          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
+            <div className="flex gap-3 items-center">
+              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">★</div>
+              <div>
+                <div className="text-[11px] text-slate-500">Average Rating</div>
+                <b className="text-2xl">4.7</b>
+              </div>
+            </div>
+            <p className="text-[10px] text-green-600 mt-2">↑ 2% <span className="text-slate-400">vs last week</span></p>
+          </div>
         </section>
 
         <section className="grid grid-cols-[1.55fr_1fr] gap-3 mb-3">
@@ -150,56 +191,6 @@ export default function AdminDashboard() {
               </div>
               <div className="h-[140px]"><Bar data={barData} options={{ plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#edf1f6' } } } }} /></div>
             </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-[1.55fr_1fr] gap-3 mb-3">
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-3 shadow-sm overflow-hidden">
-            <div className="flex justify-between mb-3"><b className="text-sm">Recent Trips (Live from Database)</b><button className="text-xs text-blue-600">View all ›</button></div>
-            <div className="overflow-x-auto">
-              <table className="w-full whitespace-nowrap text-left">
-                <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px]"><th className="p-3">Trip #</th><th className="p-3">Customer</th><th className="p-3">Rider</th><th className="p-3">Pickup Lat/Lng</th><th className="p-3">Destination Lat/Lng</th><th className="p-3">Fare</th><th className="p-3">Status</th></tr></thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={7} className="p-3 text-center text-slate-500">Loading live trips...</td></tr>
-                  ) : trips.length === 0 ? (
-                    <tr><td colSpan={7} className="p-3 text-center text-slate-500">No trips found in the database yet.</td></tr>
-                  ) : (
-                    trips.map((trip: any) => (
-                      <tr key={trip.id} className="border-t border-[#edf1f6] text-[10px]">
-                        <td className="p-3">{trip.id.substring(0, 8)}</td>
-                        <td className="p-3">{trip.customer?.email || 'N/A'}</td>
-                        <td className="p-3">{trip.rider?.email || 'Pending'}</td>
-                        <td className="p-3">{trip.pickupLat.toFixed(2)}, {trip.pickupLng.toFixed(2)}</td>
-                        <td className="p-3">{trip.dropoffLat.toFixed(2)}, {trip.dropoffLng.toFixed(2)}</td>
-                        <td className="p-3">KSh {trip.estimatedFare}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded-full text-[9px] font-bold ${
-                            trip.status === 'COMPLETED' ? 'bg-[#dcfce7] text-[#15803d]' : 
-                            trip.status === 'IN_PROGRESS' ? 'bg-[#dbeafe] text-[#1d4ed8]' : 
-                            'bg-[#fef3c7] text-[#a16207]'
-                          }`}>
-                            {trip.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-3 shadow-sm">
-            <div className="flex justify-between mb-3"><b className="text-sm">Top Performing Riders</b><button className="text-xs text-blue-600">View all ›</button></div>
-            <table className="w-full text-left">
-              <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px]"><th className="p-3">#</th><th className="p-3">Rider</th><th className="p-3">Trips</th><th className="p-3">Rating</th><th className="p-3">Earnings</th></tr></thead>
-              <tbody>
-                <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">1</td><td className="p-3">John Kamau</td><td className="p-3">184</td><td className="p-3">⭐ 4.9</td><td className="p-3">KSh 86,420</td></tr>
-                <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">2</td><td className="p-3">Peter Njoroge</td><td className="p-3">162</td><td className="p-3">⭐ 4.8</td><td className="p-3">KSh 74,230</td></tr>
-                <tr className="border-t border-[#edf1f6] text-[10px]"><td className="p-3">3</td><td className="p-3">Daniel Mutua</td><td className="p-3">148</td><td className="p-3">⭐ 4.7</td><td className="p-3">KSh 68,120</td></tr>
-              </tbody>
-            </table>
           </div>
         </section>
       </main>
