@@ -32,6 +32,7 @@ const Sidebar = () => {
 export default function RidersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRider, setSelectedRider] = useState<any>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null); // State for the image modal
 
   const { data: riders, isLoading, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['adminRiders'],
@@ -59,6 +60,25 @@ export default function RidersPage() {
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
   const filteredRiders = riders?.filter((u: any) => (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())) || [];
+
+  const DocumentLink = ({ label, url }: { label: string, url: string | null }) => {
+    if (!url) return <div className="bg-gray-50 p-3 rounded border"><span className="text-gray-500 block text-xs">{label}</span><span className="text-gray-400">Not Uploaded</span></div>;
+    
+    // Ensure the URL is absolute. If the database has an old relative path, we try to fix it.
+    const fullUrl = url.startsWith('http') ? url : `https://torq-backend.onrender.com/uploads/${url}`;
+
+    return (
+      <div className="bg-gray-50 p-3 rounded border">
+        <span className="text-gray-500 block text-xs">{label}</span>
+        <button 
+          onClick={() => setViewingImage(fullUrl)} 
+          className="font-semibold text-blue-600 hover:underline"
+        >
+          View Image
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
@@ -162,7 +182,6 @@ export default function RidersPage() {
             </div>
             
             <div className="p-6 overflow-y-auto space-y-6">
-              {/* Personal Details */}
               <div>
                 <h3 className="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Personal Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -173,7 +192,6 @@ export default function RidersPage() {
                 </div>
               </div>
 
-              {/* Motorcycle Details */}
               <div>
                 <h3 className="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Motorcycle Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -184,34 +202,13 @@ export default function RidersPage() {
                 </div>
               </div>
 
-              {/* Uploaded Documents */}
               <div>
                 <h3 className="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Uploaded Documents</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="bg-gray-50 p-3 rounded border">
-                    <span className="text-gray-500 block text-xs">National ID</span>
-                    <span className="font-semibold text-blue-600">
-                      {selectedRider.riderProfile?.idDocumentUrl ? <a href={selectedRider.riderProfile.idDocumentUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
-                    </span>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded border">
-                    <span className="text-gray-500 block text-xs">Driver License</span>
-                    <span className="font-semibold text-blue-600">
-                      {selectedRider.riderProfile?.licenseDocumentUrl ? <a href={selectedRider.riderProfile.licenseDocumentUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
-                    </span>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded border">
-                    <span className="text-gray-500 block text-xs">Insurance Certificate</span>
-                    <span className="font-semibold text-blue-600">
-                      {selectedRider.riderProfile?.insuranceDocumentUrl ? <a href={selectedRider.riderProfile.insuranceDocumentUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
-                    </span>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded border">
-                    <span className="text-gray-500 block text-xs">Selfie</span>
-                    <span className="font-semibold text-blue-600">
-                      {selectedRider.riderProfile?.selfieUrl ? <a href={selectedRider.riderProfile.selfieUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
-                    </span>
-                  </div>
+                  <DocumentLink label="National ID" url={selectedRider.riderProfile?.idDocumentUrl} />
+                  <DocumentLink label="Driver License" url={selectedRider.riderProfile?.licenseDocumentUrl} />
+                  <DocumentLink label="Insurance Certificate" url={selectedRider.riderProfile?.insuranceDocumentUrl} />
+                  <DocumentLink label="Selfie" url={selectedRider.riderProfile?.selfieUrl} />
                 </div>
               </div>
             </div>
@@ -229,6 +226,26 @@ export default function RidersPage() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* IMAGE VIEWER MODAL */}
+      {viewingImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] p-4" onClick={() => setViewingImage(null)}>
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button 
+              onClick={() => setViewingImage(null)} 
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 flex items-center gap-2 font-bold"
+            >
+              <X size={24} /> Close
+            </button>
+            <img 
+              src={viewingImage} 
+              alt="Document" 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the image itself
+            />
           </div>
         </div>
       )}
