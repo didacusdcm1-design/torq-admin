@@ -1,5 +1,5 @@
 ﻿"use client";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -11,26 +11,28 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function MapComponent() {
-    const center: [number, number] = [-1.2864, 36.8172];
-    const riders = [
-        { pos: [-1.267, 36.810], name: 'John Kamau • On trip' },
-        { pos: [-1.292, 36.821], name: 'Rider • Available' },
-        { pos: [-1.278, 36.795], name: 'Rider • Available' },
-        { pos: [-1.306, 36.830], name: 'Rider • On trip' },
-        { pos: [-1.255, 36.840], name: 'Rider • Available' },
-        { pos: [-1.285, 36.775], name: 'Rider • Available' }
-    ] as { pos: [number, number], name: string }[];
+const customIcon = new L.Icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+export default function MapComponent({ trips }: { trips: any[] }) {
+    const center: [number, number] = [-1.2864, 36.8172]; // Nairobi
 
     return (
         <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%', zIndex: 0 }}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {riders.map((rider, idx) => (
-                <Marker key={idx} position={rider.pos}>
-                    <Popup>{rider.name}</Popup>
+            {trips?.map((trip: any, idx) => (
+                <Marker key={`pickup-${idx}`} position={[trip.pickupLat, trip.pickupLng]} icon={customIcon}>
+                    <Popup>
+                        <b>Trip #{trip.id.substring(0, 8)}</b><br/>
+                        Status: {trip.status}<br/>
+                        Customer: {trip.customer?.email}<br/>
+                        Fare: KSh {trip.estimatedFare}
+                    </Popup>
                 </Marker>
             ))}
-            <Polyline positions={[[-1.267, 36.810], [-1.278, 36.795], [-1.292, 36.821]]} color="#ffbd19" weight={4} />
         </MapContainer>
     );
 }

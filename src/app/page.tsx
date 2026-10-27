@@ -28,6 +28,9 @@ const Sidebar = () => {
         <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>🚕</span> <span>Trip Management</span>
         </Link>
+        <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>🗺️</span> <span>Live Map</span>
+        </Link>
         <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>💰</span> <span>Fare & Pricing</span>
         </Link>
@@ -61,6 +64,15 @@ export default function AdminDashboard() {
     },
   });
 
+  const { data: tripsData } = useQuery({
+    queryKey: ['dashboardTrips'],
+    queryFn: async () => {
+      const res = await fetch('https://torq-backend.onrender.com/trips/admin/all');
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    },
+  });
+
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
 
   const donutData = {
@@ -72,6 +84,8 @@ export default function AdminDashboard() {
     labels: ['Apr 19','Apr 20','Apr 21','Apr 22','Apr 23','Apr 24','Apr 25'],
     datasets: [{ data: [330,370,440,370,490,560,630], backgroundColor: '#ffb91c', borderRadius: 4 }]
   };
+
+  const activeTrips = tripsData?.filter((t: any) => ['REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(t.status)) || [];
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
@@ -169,10 +183,10 @@ export default function AdminDashboard() {
           <div className="bg-white border border-[#dfe7f1] rounded-xl p-3 shadow-sm">
             <div className="flex justify-between mb-3">
               <b className="text-sm">Live Trips <span className="text-green-500">●</span> <small className="font-normal text-slate-500">Live riders on map</small></b>
-              <a href="#" className="text-xs text-blue-600">View all ›</a>
+              <Link href="/map" className="text-xs text-blue-600">View full map ›</Link>
             </div>
             <div className="relative h-[330px] rounded-lg overflow-hidden border">
-              <MapWithNoSSR />
+              <MapWithNoSSR trips={activeTrips} />
             </div>
           </div>
 
