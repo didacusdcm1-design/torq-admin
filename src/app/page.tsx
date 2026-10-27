@@ -28,6 +28,9 @@ const Sidebar = () => {
         <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>🚕</span> <span>Trip Management</span>
         </Link>
+        <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>💰</span> <span>Fare & Pricing</span>
+        </Link>
         <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♙</span> <span>Customers</span>
         </Link>
