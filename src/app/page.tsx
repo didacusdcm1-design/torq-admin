@@ -25,6 +25,9 @@ const Sidebar = () => {
         <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
           <span>⌂</span> <span>Dashboard</span>
         </Link>
+        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>🚕</span> <span>Trip Management</span>
+        </Link>
         <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♙</span> <span>Customers</span>
         </Link>
@@ -46,7 +49,6 @@ export default function AdminDashboard() {
     setDate(new Date().toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}));
   }, []);
 
-  // The 30-second auto-refresh logic
   const { data: stats, isLoading, isError, dataUpdatedAt } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: async () => {
