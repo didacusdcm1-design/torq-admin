@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Search, RefreshCw, CheckCircle } from "lucide-react";
+import { Search, RefreshCw, CheckCircle, Eye, X } from "lucide-react";
 
 const Sidebar = () => {
   return (
@@ -31,6 +31,7 @@ const Sidebar = () => {
 
 export default function RidersPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRider, setSelectedRider] = useState<any>(null);
 
   const { data: riders, isLoading, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['adminRiders'],
@@ -48,6 +49,7 @@ export default function RidersPage() {
       });
       if (res.ok) {
         alert('Rider Approved Successfully!');
+        setSelectedRider(null); // Close modal
         refetch();
       }
     } catch (e) {
@@ -93,7 +95,6 @@ export default function RidersPage() {
               <tr className="bg-white text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]">
                 <th className="p-4 font-bold">Rider Name / Email</th>
                 <th className="p-4 font-bold">Phone Number</th>
-                <th className="p-4 font-bold">Password (Hashed)</th>
                 <th className="p-4 font-bold">OTP Code</th>
                 <th className="p-4 font-bold">Verification Status</th>
                 <th className="p-4 font-bold">Actions</th>
@@ -101,9 +102,9 @@ export default function RidersPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={6} className="p-8 text-center text-slate-500">Loading riders...</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading riders...</td></tr>
               ) : filteredRiders.length === 0 ? (
-                <tr><td colSpan={6} className="p-8 text-center text-slate-500">No riders found.</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-slate-500">No riders found.</td></tr>
               ) : (
                 filteredRiders.map((user: any) => (
                   <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
@@ -112,7 +113,6 @@ export default function RidersPage() {
                       <div className="text-slate-500">{user.email}</div>
                     </td>
                     <td className="p-4 font-mono">{user.phone || 'N/A'}</td>
-                    <td className="p-4 font-mono text-slate-400 max-w-[150px] truncate" title={user.password}>{user.password}</td>
                     <td className="p-4 font-mono text-green-600 font-bold">{user.otpCode || 'N/A'}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
@@ -123,7 +123,13 @@ export default function RidersPage() {
                         {user.riderProfile?.verificationStatus || 'INCOMPLETE'}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 flex gap-2">
+                      <button 
+                        onClick={() => setSelectedRider(user)}
+                        className="bg-gray-200 text-gray-800 px-3 py-1 rounded flex items-center gap-1 text-[10px] font-bold hover:bg-gray-300"
+                      >
+                        <Eye size={12} /> View
+                      </button>
                       {user.riderProfile?.verificationStatus === 'PENDING' && (
                         <button 
                           onClick={() => approveRider(user.id)}
@@ -140,6 +146,84 @@ export default function RidersPage() {
           </table>
         </div>
       </main>
+
+      {/* RIDER DETAILS MODAL */}
+      {selectedRider && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-[#f7f9fc]">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Rider Application Details</h2>
+                <p className="text-sm text-gray-500">{selectedRider.email}</p>
+              </div>
+              <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-gray-700">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Personal Details */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Personal Details</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-gray-500">Full Name:</span> {selectedRider.riderProfile?.fullName || 'N/A'}</div>
+                  <div><span className="text-gray-500">Date of Birth:</span> {selectedRider.riderProfile?.dateOfBirth || 'N/A'}</div>
+                  <div><span className="text-gray-500">National ID:</span> {selectedRider.riderProfile?.nationalIdNumber || 'N/A'}</div>
+                  <div><span className="text-gray-500">Emergency Contact:</span> {selectedRider.riderProfile?.emergencyContact || 'N/A'}</div>
+                </div>
+              </div>
+
+              {/* Motorcycle Details */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Motorcycle Details</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-gray-500">Registration:</span> {selectedRider.riderProfile?.motorcycleReg || 'N/A'}</div>
+                  <div><span className="text-gray-500">Make:</span> {selectedRider.riderProfile?.motorcycleMake || 'N/A'}</div>
+                  <div><span className="text-gray-500">Model:</span> {selectedRider.riderProfile?.motorcycleModel || 'N/A'}</div>
+                  <div><span className="text-gray-500">Insurance Expiry:</span> {selectedRider.riderProfile?.insuranceExpiry || 'N/A'}</div>
+                </div>
+              </div>
+
+              {/* Uploaded Documents */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-800 mb-2 border-b pb-1">Uploaded Documents</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <span className="text-gray-500 block text-xs">National ID</span>
+                    <span className="font-semibold text-blue-600">{selectedRider.riderProfile?.idDocumentUrl || 'Not Uploaded'}</span>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <span className="text-gray-500 block text-xs">Driver License</span>
+                    <span className="font-semibold text-blue-600">{selectedRider.riderProfile?.licenseDocumentUrl || 'Not Uploaded'}</span>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <span className="text-gray-500 block text-xs">Insurance Certificate</span>
+                    <span className="font-semibold text-blue-600">{selectedRider.riderProfile?.insuranceDocumentUrl || 'Not Uploaded'}</span>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <span className="text-gray-500 block text-xs">Selfie</span>
+                    <span className="font-semibold text-blue-600">{selectedRider.riderProfile?.selfieUrl || 'Not Uploaded'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+              <button onClick={() => setSelectedRider(null)} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-800">
+                Close
+              </button>
+              {selectedRider.riderProfile?.verificationStatus === 'PENDING' && (
+                <button 
+                  onClick={() => approveRider(selectedRider.id)}
+                  className="px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 flex items-center gap-2"
+                >
+                  <CheckCircle size={16} /> Approve Rider
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
