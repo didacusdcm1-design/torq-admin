@@ -22,8 +22,14 @@ const Sidebar = () => {
         <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>🚕</span> <span>Trip Management</span>
         </Link>
+        <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>🗺️</span> <span>Live Map</span>
+        </Link>
         <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>💰</span> <span>Fare & Pricing</span>
+        </Link>
+        <Link href="/finance" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>💳</span> <span>Wallets & Payouts</span>
         </Link>
         <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
           <span>♙</span> <span>Customers</span>
@@ -42,18 +48,17 @@ const Sidebar = () => {
 export default function RidersPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: users, isLoading, isError, dataUpdatedAt } = useQuery({
+  const { data: riders, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ['adminRiders'],
     queryFn: async () => {
-      const res = await fetch('https://torq-backend.onrender.com/trips/admin/users');
+      const res = await fetch('https://torq-backend.onrender.com/admin/users');
       if (!res.ok) throw new Error('Failed to fetch users');
-      const data = await res.json();
-      return data.filter((u: any) => u.role === 'RIDER');
+      return res.json();
     },
   });
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
-  const filteredRiders = users?.filter((u: any) => (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())) || [];
+  const filteredRiders = riders?.filter((u: any) => (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())) || [];
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
@@ -71,12 +76,6 @@ export default function RidersPage() {
             </div>
           </div>
         </div>
-
-        {isError && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-sm">
-            Failed to connect to the backend. Please check your Render server.
-          </div>
-        )}
 
         <div className="bg-white border border-[#dfe7f1] rounded-xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-[#dfe7f1] bg-[#f7f9fc] flex justify-between items-center">
@@ -98,11 +97,11 @@ export default function RidersPage() {
           <table className="w-full text-left whitespace-nowrap">
             <thead>
               <tr className="bg-white text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]">
-                <th className="p-4 font-bold">Rider ID</th>
-                <th className="p-4 font-bold">Email</th>
-                <th className="p-4 font-bold">Phone</th>
-                <th className="p-4 font-bold">Joined</th>
-                <th className="p-4 font-bold">Status</th>
+                <th className="p-4 font-bold">Rider Name / Email</th>
+                <th className="p-4 font-bold">Phone Number</th>
+                <th className="p-4 font-bold">Password (Hashed)</th>
+                <th className="p-4 font-bold">OTP Code</th>
+                <th className="p-4 font-bold">Verification Status</th>
               </tr>
             </thead>
             <tbody>
@@ -113,11 +112,24 @@ export default function RidersPage() {
               ) : (
                 filteredRiders.map((user: any) => (
                   <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
-                    <td className="p-4 font-mono text-gray-500">{user.id.substring(0, 8)}</td>
-                    <td className="p-4 font-semibold">{user.email}</td>
-                    <td className="p-4">{user.phone || 'N/A'}</td>
-                    <td className="p-4 text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
-                    <td className="p-4"><span className="px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span></td>
+                    <td className="p-4">
+                      <div className="font-semibold">{user.riderProfile?.fullName || 'N/A'}</div>
+                      <div className="text-slate-500">{user.email}</div>
+                    </td>
+                    <td className="p-4 font-mono">{user.phone || 'N/A'}</td>
+                    <td className="p-4 font-mono text-slate-400 max-w-[150px] truncate" title={user.password}>
+                      {user.password}
+                    </td>
+                    <td className="p-4 font-mono text-green-600 font-bold">
+                      {user.otpCode || 'N/A'}
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                        user.riderProfile?.verificationStatus === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {user.riderProfile?.verificationStatus || 'INCOMPLETE'}
+                      </span>
+                    </td>
                   </tr>
                 ))
               )}
