@@ -1,58 +1,116 @@
 ﻿"use client";
-import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
-import Link from "next/link";
 
-const Sidebar = () => (
-  <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0 h-screen">
-    <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
-      <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
-      <div>
-        <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
-        <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { Search, RefreshCw } from "lucide-react";
+
+const Sidebar = () => {
+  return (
+    <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0 h-screen">
+      <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
+        <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
+        <div>
+          <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
+          <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
+        </div>
       </div>
-    </div>
-    <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
-      <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">⌂ Dashboard</Link>
-      <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">♧ Trip Management</Link>
-      <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">♙ Customers</Link>
-      <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">♙ Customers</Link>
-      <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">⌖ Live Map</Link>
-    </nav>
-    <div className="p-4 border-t border-slate-700 text-xs text-slate-400">🟢 System Operational</div>
-  </aside>
-);
+      <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
+        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>⌂</span> <span>Dashboard</span>
+        </Link>
+        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>🚕</span> <span>Trip Management</span>
+        </Link>
+        <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>💰</span> <span>Fare & Pricing</span>
+        </Link>
+        <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
+          <span>♙</span> <span>Customers</span>
+        </Link>
+        <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
+          <span>♟</span> <span>Riders</span>
+        </Link>
+      </nav>
+      <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
+        🟢 System Operational<br/><br/>TORQ Admin • Live Data
+      </div>
+    </aside>
+  );
+};
 
 export default function CustomersPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fetch('https://torq-backend.onrender.com/trips/admin/users')
-      .then(res => res.json())
-      .then(data => { setUsers(data.filter((u: any) => u.role === 'CUSTOMER')); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
-  }, []);
+  const { data: users, isLoading, isError, dataUpdatedAt } = useQuery({
+    queryKey: ['adminCustomers'],
+    queryFn: async () => {
+      const res = await fetch('https://torq-backend.onrender.com/trips/admin/users');
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
+      return data.filter((u: any) => u.role === 'CUSTOMER');
+    },
+  });
 
-  const filteredCustomers = users.filter(u => (u.email || "").toLowerCase().includes(search.toLowerCase()));
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
+  const filteredCustomers = users?.filter((u: any) => (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())) || [];
 
   return (
     <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-extrabold">Customer Management</h1>
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-            <input type="text" placeholder="Search customers..." className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffbd19]" onChange={(e) => setSearch(e.target.value)} />
+          <div>
+            <h1 className="text-2xl font-extrabold">Customer Management</h1>
+            <p className="text-xs text-slate-500 mt-1">View and manage all registered customers.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm flex items-center gap-2">
+              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
+              Last updated: {lastUpdated}
+            </div>
           </div>
         </div>
+
+        {isError && (
+          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-sm">
+            Failed to connect to the backend. Please check your Render server.
+          </div>
+        )}
+
         <div className="bg-white border border-[#dfe7f1] rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-[#dfe7f1] bg-[#f7f9fc] flex justify-between items-center">
+            <div className="relative w-96">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search customers by email..." 
+                className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffbd19] text-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="text-xs text-slate-500 font-semibold">
+              Showing {filteredCustomers.length} customers
+            </div>
+          </div>
+
           <table className="w-full text-left whitespace-nowrap">
-            <thead><tr className="bg-[#f7f9fc] text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]"><th className="p-4 font-bold">Customer ID</th><th className="p-4 font-bold">Email</th><th className="p-4 font-bold">Phone</th><th className="p-4 font-bold">Joined</th><th className="p-4 font-bold">Status</th></tr></thead>
+            <thead>
+              <tr className="bg-white text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]">
+                <th className="p-4 font-bold">Customer ID</th>
+                <th className="p-4 font-bold">Email</th>
+                <th className="p-4 font-bold">Phone</th>
+                <th className="p-4 font-bold">Joined</th>
+                <th className="p-4 font-bold">Status</th>
+              </tr>
+            </thead>
             <tbody>
-              {loading ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading riders...</td></tr> ) : filteredCustomers.length === 0 ? ( <tr><td colSpan={5} className="p-8 text-center text-slate-500">No riders found.</td></tr> ) : (
+              {isLoading ? (
+                <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading customers...</td></tr>
+              ) : filteredCustomers.length === 0 ? (
+                <tr><td colSpan={5} className="p-8 text-center text-slate-500">No customers found.</td></tr>
+              ) : (
                 filteredCustomers.map((user: any) => (
                   <tr key={user.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
                     <td className="p-4 font-mono text-gray-500">{user.id.substring(0, 8)}</td>
