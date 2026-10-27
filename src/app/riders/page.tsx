@@ -49,7 +49,7 @@ export default function RidersPage() {
       });
       if (res.ok) {
         alert('Rider Approved Successfully!');
-        setSelectedRider(null); // Close modal
+        setSelectedRider(null);
         refetch();
       }
     } catch (e) {
@@ -190,19 +190,27 @@ export default function RidersPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="bg-gray-50 p-3 rounded border">
                     <span className="text-gray-500 block text-xs">National ID</span>
-                    <span className="font-semibold text-blue-600">(selectedRider.riderProfile?.idDocumentUrl ? <a href={selectedRider.riderProfile.idDocumentUrl} target="_blank" className="text-blue-600 hover:underline">View Document</a> : 'Not Uploaded')</span>
+                    <span className="font-semibold text-blue-600">
+                      {selectedRider.riderProfile?.idDocumentUrl ? <a href={selectedRider.riderProfile.idDocumentUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
+                    </span>
                   </div>
                   <div className="bg-gray-50 p-3 rounded border">
                     <span className="text-gray-500 block text-xs">Driver License</span>
-                    <span className="font-semibold text-blue-600">(selectedRider.riderProfile?.licenseDocumentUrl ? <a href={selectedRider.riderProfile.licenseDocumentUrl} target="_blank" className="text-blue-600 hover:underline">View Document</a> : 'Not Uploaded')</span>
+                    <span className="font-semibold text-blue-600">
+                      {selectedRider.riderProfile?.licenseDocumentUrl ? <a href={selectedRider.riderProfile.licenseDocumentUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
+                    </span>
                   </div>
                   <div className="bg-gray-50 p-3 rounded border">
                     <span className="text-gray-500 block text-xs">Insurance Certificate</span>
-                    <span className="font-semibold text-blue-600">(selectedRider.riderProfile?.insuranceDocumentUrl ? <a href={selectedRider.riderProfile.insuranceDocumentUrl} target="_blank" className="text-blue-600 hover:underline">View Document</a> : 'Not Uploaded')</span>
+                    <span className="font-semibold text-blue-600">
+                      {selectedRider.riderProfile?.insuranceDocumentUrl ? <a href={selectedRider.riderProfile.insuranceDocumentUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
+                    </span>
                   </div>
                   <div className="bg-gray-50 p-3 rounded border">
                     <span className="text-gray-500 block text-xs">Selfie</span>
-                    <span className="font-semibold text-blue-600">(selectedRider.riderProfile?.selfieUrl ? <a href={selectedRider.riderProfile.selfieUrl} target="_blank" className="text-blue-600 hover:underline">View Document</a> : 'Not Uploaded')</span>
+                    <span className="font-semibold text-blue-600">
+                      {selectedRider.riderProfile?.selfieUrl ? <a href={selectedRider.riderProfile.selfieUrl} target="_blank" className="hover:underline">View Document</a> : 'Not Uploaded'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -227,4 +235,3 @@ export default function RidersPage() {
     </div>
   );
 }
-
