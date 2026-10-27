@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Search, RefreshCw, CheckCircle, Eye, X } from "lucide-react";
+import { Search, RefreshCw, CheckCircle, Eye, X, XCircle } from "lucide-react";
 
 const Sidebar = () => {
   return (
@@ -32,7 +32,7 @@ const Sidebar = () => {
 export default function RidersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRider, setSelectedRider] = useState<any>(null);
-  const [viewingImage, setViewingImage] = useState<string | null>(null); // State for the image modal
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   const { data: riders, isLoading, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['adminRiders'],
@@ -45,17 +45,22 @@ export default function RidersPage() {
 
   const approveRider = async (userId: string) => {
     try {
-      const res = await fetch(`https://torq-backend.onrender.com/trips/admin/riders/${userId}/approve`, {
+      const res = await fetch(`https://torq-backend.onrender.com/trips/admin/riders/${userId}/approve`, { method: 'PATCH' });
+      if (res.ok) { alert('Rider Approved!'); setSelectedRider(null); refetch(); }
+    } catch (e) { alert('Failed to approve rider'); }
+  };
+
+  const rejectRider = async (userId: string) => {
+    const reason = prompt("Enter rejection reason (e.g., 'Blurry ID photo', 'Invalid license'):");
+    if (!reason) return;
+    try {
+      const res = await fetch(`https://torq-backend.onrender.com/trips/admin/riders/${userId}/reject`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
       });
-      if (res.ok) {
-        alert('Rider Approved Successfully!');
-        setSelectedRider(null);
-        refetch();
-      }
-    } catch (e) {
-      alert('Failed to approve rider');
-    }
+      if (res.ok) { alert('Rider Rejected!'); setSelectedRider(null); refetch(); }
+    } catch (e) { alert('Failed to reject rider'); }
   };
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
@@ -63,19 +68,11 @@ export default function RidersPage() {
 
   const DocumentLink = ({ label, url }: { label: string, url: string | null }) => {
     if (!url) return <div className="bg-gray-50 p-3 rounded border"><span className="text-gray-500 block text-xs">{label}</span><span className="text-gray-400">Not Uploaded</span></div>;
-    
-    // Ensure the URL is absolute. If the database has an old relative path, we try to fix it.
     const fullUrl = url.startsWith('http') ? url : `https://torq-backend.onrender.com/uploads/${url}`;
-
     return (
       <div className="bg-gray-50 p-3 rounded border">
         <span className="text-gray-500 block text-xs">{label}</span>
-        <button 
-          onClick={() => setViewingImage(fullUrl)} 
-          className="font-semibold text-blue-600 hover:underline"
-        >
-          View Image
-        </button>
+        <button onClick={() => setViewingImage(fullUrl)} className="font-semibold text-blue-600 hover:underline">View Image</button>
       </div>
     );
   };
@@ -87,7 +84,7 @@ export default function RidersPage() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-extrabold">Rider Management</h1>
-            <p className="text-xs text-slate-500 mt-1">View, approve, and manage all registered riders.</p>
+            <p className="text-xs text-slate-500 mt-1">View, approve, reject, and manage all registered riders.</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm flex items-center gap-2">
@@ -101,11 +98,7 @@ export default function RidersPage() {
           <div className="p-4 border-b border-[#dfe7f1] bg-[#f7f9fc] flex justify-between items-center">
             <div className="relative w-96">
               <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-              <input 
-                type="text" placeholder="Search riders by email..." 
-                className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffbd19] text-sm"
-                value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input type="text" placeholder="Search riders by email..." className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffbd19] text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="text-xs text-slate-500 font-semibold">Showing {filteredRiders.length} riders</div>
           </div>
@@ -137,6 +130,7 @@ export default function RidersPage() {
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
                         user.riderProfile?.verificationStatus === 'APPROVED' ? 'bg-green-100 text-green-700' : 
+                        user.riderProfile?.verificationStatus === 'REJECTED' ? 'bg-red-100 text-red-700' :
                         user.riderProfile?.verificationStatus === 'PENDING' ? 'bg-orange-100 text-orange-700' : 
                         'bg-gray-100 text-gray-700'
                       }`}>
@@ -144,19 +138,18 @@ export default function RidersPage() {
                       </span>
                     </td>
                     <td className="p-4 flex gap-2">
-                      <button 
-                        onClick={() => setSelectedRider(user)}
-                        className="bg-gray-200 text-gray-800 px-3 py-1 rounded flex items-center gap-1 text-[10px] font-bold hover:bg-gray-300"
-                      >
+                      <button onClick={() => setSelectedRider(user)} className="bg-gray-200 text-gray-800 px-3 py-1 rounded flex items-center gap-1 text-[10px] font-bold hover:bg-gray-300">
                         <Eye size={12} /> View
                       </button>
                       {user.riderProfile?.verificationStatus === 'PENDING' && (
-                        <button 
-                          onClick={() => approveRider(user.id)}
-                          className="bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1 text-[10px] font-bold hover:bg-green-700"
-                        >
-                          <CheckCircle size={12} /> Approve
-                        </button>
+                        <>
+                          <button onClick={() => approveRider(user.id)} className="bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1 text-[10px] font-bold hover:bg-green-700">
+                            <CheckCircle size={12} /> Approve
+                          </button>
+                          <button onClick={() => rejectRider(user.id)} className="bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 text-[10px] font-bold hover:bg-red-700">
+                            <XCircle size={12} /> Reject
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -176,9 +169,7 @@ export default function RidersPage() {
                 <h2 className="text-xl font-bold text-gray-800">Rider Application Details</h2>
                 <p className="text-sm text-gray-500">{selectedRider.email}</p>
               </div>
-              <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-gray-700">
-                <X size={24} />
-              </button>
+              <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-gray-700"><X size={24} /></button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-6">
@@ -214,16 +205,16 @@ export default function RidersPage() {
             </div>
 
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setSelectedRider(null)} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-800">
-                Close
-              </button>
+              <button onClick={() => setSelectedRider(null)} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-800">Close</button>
               {selectedRider.riderProfile?.verificationStatus === 'PENDING' && (
-                <button 
-                  onClick={() => approveRider(selectedRider.id)}
-                  className="px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 flex items-center gap-2"
-                >
-                  <CheckCircle size={16} /> Approve Rider
-                </button>
+                <>
+                  <button onClick={() => rejectRider(selectedRider.id)} className="px-4 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700 flex items-center gap-2">
+                    <XCircle size={16} /> Reject
+                  </button>
+                  <button onClick={() => approveRider(selectedRider.id)} className="px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 flex items-center gap-2">
+                    <CheckCircle size={16} /> Approve
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -234,18 +225,10 @@ export default function RidersPage() {
       {viewingImage && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] p-4" onClick={() => setViewingImage(null)}>
           <div className="relative max-w-4xl max-h-[90vh]">
-            <button 
-              onClick={() => setViewingImage(null)} 
-              className="absolute -top-10 right-0 text-white hover:text-gray-300 flex items-center gap-2 font-bold"
-            >
+            <button onClick={() => setViewingImage(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300 flex items-center gap-2 font-bold">
               <X size={24} /> Close
             </button>
-            <img 
-              src={viewingImage} 
-              alt="Document" 
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the image itself
-            />
+            <img src={viewingImage} alt="Document" className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
       )}
