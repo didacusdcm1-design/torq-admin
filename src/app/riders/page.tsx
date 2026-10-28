@@ -7,10 +7,10 @@ import { api } from "@/lib/api";
 
 type Rider = {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  phone: string;
+  phone?: string;
   status: string;
 };
 
@@ -21,13 +21,19 @@ export default function RiderManagementPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data: riders, isLoading, dataUpdatedAt } = useQuery({
+  const { data: ridersResponse, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["riders", search],
     queryFn: async () => {
       const response = await api.get(`/riders?search=${search}`);
+      console.log("RAW API RESPONSE:", response.data); // Debugging log
       return response.data;
     },
   });
+
+  // Safely extract the array in case the backend returns { data: [...] } or { riders: [...] }
+  const riders: Rider[] = Array.isArray(ridersResponse) 
+    ? ridersResponse 
+    : (ridersResponse?.data || ridersResponse?.riders || []);
 
   const rejectMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
@@ -91,15 +97,28 @@ export default function RiderManagementPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={4} className="p-8 text-center text-gray-500">Loading riders...</td></tr>}
-              {!isLoading && riders?.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-gray-500">No riders found.</td></tr>}
               
-              {riders?.map((rider: Rider) => (
+              {isError && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-red-500 font-medium">
+                    Error connecting to backend: {(error as any)?.message}
+                  </td>
+                </tr>
+              )}
+
+              {!isLoading && !isError && riders.length === 0 && (
+                <tr><td colSpan={4} className="p-8 text-center text-gray-500">No riders found in the database.</td></tr>
+              )}
+              
+              {riders.map((rider: Rider) => (
                 <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="p-4">
-                    <div className="font-medium text-gray-900">{rider.firstName} {rider.lastName}</div>
+                    <div className="font-medium text-gray-900">
+                      {rider.firstName || 'Unknown'} {rider.lastName || ''}
+                    </div>
                     <div className="text-sm text-gray-500">{rider.email}</div>
                   </td>
-                  <td className="p-4 text-gray-700">{rider.phone}</td>
+                  <td className="p-4 text-gray-700">{rider.phone || 'N/A'}</td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                       rider.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 
@@ -126,7 +145,7 @@ export default function RiderManagementPage() {
         {isModalOpen && selectedRider && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Reject Rider: {selectedRider.firstName}</h2>
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Reject Rider: {selectedRider.firstName || 'Unknown'}</h2>
               <form onSubmit={handleRejectSubmit}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Rejection</label>
                 <textarea
