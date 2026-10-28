@@ -1,221 +1,185 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
-import { Doughnut, Bar } from 'react-chartjs-2';
+import { useState, useEffect } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import dynamic from 'next/dynamic';
-import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { Bell, Search, Bike, Users, Star, Wallet } from "lucide-react";
+import { 
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer 
+} from 'recharts';
 
-const MapWithNoSSR = dynamic(() => import('./MapComponent'), { ssr: false });
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+// Dynamically import the map so it doesn't break SSR
+const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
 
-const Sidebar = () => {
-  return (
-    <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0 h-screen">
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
-        <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
-        <div>
-          <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
-          <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
-        </div>
-      </div>
-      <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
-          <span>⌂</span> <span>Dashboard</span>
-        </Link>
-        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>🚕</span> <span>Trip Management</span>
-        </Link>
-        <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>🗺️</span> <span>Live Map</span>
-        </Link>
-        <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>💰</span> <span>Fare & Pricing</span>
-        </Link>
-        <Link href="/finance" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>💳</span> <span>Wallets & Payouts</span>
-        </Link>
-        <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♙</span> <span>Customers</span>
-        </Link>
-        <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♟</span> <span>Riders</span>
-        </Link>
-      </nav>
-      <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
-        🟢 System Operational<br/><br/>TORQ Admin • Live Data
-      </div>
-    </aside>
-  );
-};
+const mockPieData = [
+  { name: 'Completed', value: 606, color: '#10b981' },
+  { name: 'In Progress', value: 135, color: '#3b82f6' },
+  { name: 'Pending', value: 59, color: '#f59e0b' },
+  { name: 'Cancelled', value: 42, color: '#ef4444' },
+];
 
-export default function AdminDashboard() {
-  const [date, setDate] = useState("");
-  
+const mockBarData = [
+  { name: 'Apr 19', revenue: 350 }, { name: 'Apr 20', revenue: 400 },
+  { name: 'Apr 21', revenue: 450 }, { name: 'Apr 22', revenue: 380 },
+  { name: 'Apr 23', revenue: 480 }, { name: 'Apr 24', revenue: 520 },
+  { name: 'Apr 25', revenue: 600 },
+];
+
+export default function DashboardPage() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState("");
+
   useEffect(() => {
-    setDate(new Date().toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}));
+    setIsMounted(true);
+    setLastUpdated(new Date().toLocaleTimeString('en-US'));
+    const interval = setInterval(() => {
+      setLastUpdated(new Date().toLocaleTimeString('en-US'));
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const { data: stats, isLoading, isError, dataUpdatedAt } = useQuery({
-    queryKey: ['dashboardStats'],
-    queryFn: async () => {
-      const res = await fetch('https://torq-backend.onrender.com/admin/dashboard-stats');
-      if (!res.ok) throw new Error('Network response was not ok');
-      return res.json();
-    },
-  });
-
-  const { data: tripsData } = useQuery({
-    queryKey: ['dashboardTrips'],
-    queryFn: async () => {
-      const res = await fetch('https://torq-backend.onrender.com/trips/admin/all');
-      if (!res.ok) throw new Error('Network response was not ok');
-      return res.json();
-    },
-  });
-
-  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
-
-  const donutData = {
-    labels: ['Completed','In Progress','Pending','Cancelled'],
-    datasets: [{ data: [606,135,59,42], backgroundColor: ['#20b66a','#2784f5','#ffb51b','#fa4e52'], borderWidth: 0 }]
-  };
-
-  const barData = {
-    labels: ['Apr 19','Apr 20','Apr 21','Apr 22','Apr 23','Apr 24','Apr 25'],
-    datasets: [{ data: [330,370,440,370,490,560,630], backgroundColor: '#ffb91c', borderRadius: 4 }]
-  };
-
-  const activeTrips = tripsData?.filter((t: any) => ['REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(t.status)) || [];
-
   return (
-    <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-5">
-        <header className="h-14 bg-[#101822] text-white rounded-lg flex items-center justify-between px-4 mb-5">
-          <button className="text-xl">☰</button>
-          <div className="rounded-lg bg-slate-700 px-4 py-2 w-80 text-xs flex items-center gap-2">
-            <span>⌕</span>
-            <input className="bg-transparent outline-none w-full text-white placeholder-slate-400" placeholder="Search trips, riders, customers..." />
-          </div>
-          <div className="text-xs flex items-center gap-4">
-            <span>♧</span> <span>🔔</span> <b>Admin</b> · Super Admin
-          </div>
-        </header>
-
-        <div className="flex justify-between items-start mb-4">
+    <DashboardLayout>
+      <div className="max-w-[1600px] mx-auto">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-extrabold">Dashboard</h1>
-            <p className="text-xs text-slate-500 mt-1">Welcome back, Admin. Here's what's happening with TORQ today.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-500">Welcome back, Admin. Here's what's happening with TORQ today.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm flex items-center gap-2">
-              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm text-gray-600">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
               Last updated: {lastUpdated}
             </div>
-            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm">{date}</div>
+            <div className="bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm text-gray-600">
+              Wed, 28 Oct 2026
+            </div>
           </div>
         </div>
 
-        {isError && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-sm">
-            Failed to connect to the backend. Please check your Render server.
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Bike size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Total Trips (Today)</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-xs text-green-500 mt-1">↑ 12% vs yesterday</div>
           </div>
-        )}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Bike size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Active Riders</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">3</div>
+            <div className="text-xs text-green-500 mt-1">↑ 8% vs yesterday</div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Users size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Active Customers</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">1</div>
+            <div className="text-xs text-green-500 mt-1">↑ 15% vs yesterday</div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Wallet size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Total Revenue (Today)</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-xs text-green-500 mt-1">↑ 18% vs yesterday</div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Star size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Average Rating</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">4.7</div>
+            <div className="text-xs text-green-500 mt-1">↑ 2% vs last week</div>
+          </div>
+        </div>
 
-        <section className="grid grid-cols-5 gap-3 mb-3">
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">🏍</div>
-              <div>
-                <div className="text-[11px] text-slate-500">Total Trips (Today)</div>
-                <b className="text-2xl">{isLoading ? "..." : stats?.totalTripsToday || 0}</b>
+        {/* Middle Section - Map & Pie Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          
+          {/* Map Card */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm lg:col-span-2">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-gray-900">Live Trips</h2>
+                <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live riders on map
+                </span>
               </div>
+              <button className="text-sm text-blue-600 hover:underline">View full map →</button>
             </div>
-            <p className="text-[10px] text-green-600 mt-2">↑ 12% <span className="text-slate-400">vs yesterday</span></p>
-          </div>
-
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">♟</div>
-              <div>
-                <div className="text-[11px] text-slate-500">Active Riders</div>
-                <b className="text-2xl">{isLoading ? "..." : stats?.activeRiders || 0}</b>
-              </div>
-            </div>
-            <p className="text-[10px] text-green-600 mt-2">↑ 8% <span className="text-slate-400">vs yesterday</span></p>
-          </div>
-
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">♙</div>
-              <div>
-                <div className="text-[11px] text-slate-500">Active Customers</div>
-                <b className="text-2xl">{isLoading ? "..." : stats?.activeCustomers || 0}</b>
-              </div>
-            </div>
-            <p className="text-[10px] text-green-600 mt-2">↑ 15% <span className="text-slate-400">vs yesterday</span></p>
-          </div>
-
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">KSh</div>
-              <div>
-                <div className="text-[11px] text-slate-500">Total Revenue (Today)</div>
-                <b className="text-2xl">{isLoading ? "..." : (stats?.revenueToday || 0).toLocaleString()}</b>
-              </div>
-            </div>
-            <p className="text-[10px] text-green-600 mt-2">↑ 18% <span className="text-slate-400">vs yesterday</span></p>
-          </div>
-
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#ffbd19] text-[#111827] rounded-xl p-3 text-xl font-bold">★</div>
-              <div>
-                <div className="text-[11px] text-slate-500">Average Rating</div>
-                <b className="text-2xl">4.7</b>
-              </div>
-            </div>
-            <p className="text-[10px] text-green-600 mt-2">↑ 2% <span className="text-slate-400">vs last week</span></p>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-[1.55fr_1fr] gap-3 mb-3">
-          <div className="bg-white border border-[#dfe7f1] rounded-xl p-3 shadow-sm">
-            <div className="flex justify-between mb-3">
-              <b className="text-sm">Live Trips <span className="text-green-500">●</span> <small className="font-normal text-slate-500">Live riders on map</small></b>
-              <Link href="/map" className="text-xs text-blue-600">View full map ›</Link>
-            </div>
-            <div className="relative h-[330px] rounded-lg overflow-hidden border">
-              <MapWithNoSSR trips={activeTrips} />
+            
+            <div className="h-[350px] w-full rounded-lg overflow-hidden border border-gray-100 relative z-0">
+              {isMounted && (
+                <MapContainer center={[-1.286389, 36.817223]} zoom={11} style={{ height: '100%', width: '100%' }}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker position={[-1.286389, 36.817223]} />
+                </MapContainer>
+              )}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-              <b className="text-sm">Trip Status</b>
-              <div className="flex items-center gap-4 mt-3">
-                <div className="w-2/5 relative"><Doughnut data={donutData} options={{ cutout: '72%', plugins: { legend: { display: false } } }} /></div>
-                <div className="flex-1 space-y-3 text-[11px]">
-                  <p>🟢 Completed <b className="float-right">72% (606)</b></p>
-                  <p>🔵 In Progress <b className="float-right">16% (135)</b></p>
-                  <p>🟡 Pending <b className="float-right">7% (59)</b></p>
-                  <p>🔴 Cancelled <b className="float-right">5% (42)</b></p>
+          {/* Trip Status Chart */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <h2 className="font-bold text-gray-900 mb-4">Trip Status</h2>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={mockPieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {mockPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-2 mt-4">
+              {mockPieData.map((item) => (
+                <div key={item.name} className="flex justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                    <span className="text-gray-600">{item.name}</span>
+                  </div>
+                  <span className="text-gray-900 font-medium">{Math.round((item.value / 842) * 100)}% ({item.value})</span>
                 </div>
-              </div>
-            </div>
-            <div className="bg-white border border-[#dfe7f1] rounded-xl p-4 shadow-sm">
-              <div className="flex justify-between mb-2">
-                <b className="text-sm">Revenue Overview</b>
-                <select className="border rounded px-2 py-1 text-[10px] outline-none"><option>Last 7 days</option><option>Last 30 days</option></select>
-              </div>
-              <div className="h-[140px]"><Bar data={barData} options={{ plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#edf1f6' } } } }} /></div>
+              ))}
             </div>
           </div>
-        </section>
-      </main>
-    </div>
+        </div>
+
+        {/* Bottom Section - Revenue Chart */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-bold text-gray-900">Revenue Overview</h2>
+            <select className="border border-gray-200 rounded-md px-3 py-1.5 text-sm bg-gray-50">
+              <option>Last 7 days</option>
+              <option>Last 30 days</option>
+            </select>
+          </div>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={mockBarData}>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="revenue" fill="#FCD34D" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+      </div>
+    </DashboardLayout>
   );
 }
