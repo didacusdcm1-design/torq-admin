@@ -12,7 +12,6 @@ type Trip = {
   pickupAddress: string;
   destinationAddress: string;
   fare: number;
-  createdAt: string;
   rider?: { firstName: string; lastName: string };
   customer?: { firstName: string; lastName: string };
 };
@@ -20,11 +19,9 @@ type Trip = {
 export default function TripsPage() {
   const [search, setSearch] = useState("");
 
-  // 30-Second Auto-Refreshing Query for Trips
   const { data: trips, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["trips", search],
     queryFn: async () => {
-      // Note: You will need to ensure your NestJS backend has a GET /trips endpoint
       const response = await api.get(`/trips?search=${search}`);
       return response.data;
     },
@@ -36,7 +33,7 @@ export default function TripsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Trip Monitoring</h1>
