@@ -2,145 +2,102 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { Search, RefreshCw } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { api } from "@/lib/api";
 
-const Sidebar = () => {
-  return (
-    <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0 h-screen">
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
-        <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
-        <div>
-          <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
-          <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
-        </div>
-      </div>
-      <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>⌂</span> <span>Dashboard</span>
-        </Link>
-        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
-          <span>🚕</span> <span>Trip Management</span>
-        </Link>
-        <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♙</span> <span>Customers</span>
-        </Link>
-        <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♟</span> <span>Riders</span>
-        </Link>
-      </nav>
-      <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
-        🟢 System Operational<br/><br/>TORQ Admin • Live Data
-      </div>
-    </aside>
-  );
+type Trip = {
+  id: string;
+  bookingRef: string;
+  status: string;
+  pickupAddress: string;
+  destinationAddress: string;
+  fare: number;
+  createdAt: string;
+  rider?: { firstName: string; lastName: string };
+  customer?: { firstName: string; lastName: string };
 };
 
 export default function TripsPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
+  const [search, setSearch] = useState("");
 
-  const { data: trips, isLoading, isError, dataUpdatedAt } = useQuery({
-    queryKey: ['adminTrips', activeSearch],
+  // 30-Second Auto-Refreshing Query for Trips
+  const { data: trips, isLoading, dataUpdatedAt } = useQuery({
+    queryKey: ["trips", search],
     queryFn: async () => {
-      const res = await fetch(`https://torq-backend.onrender.com/trips/admin/all?search=${activeSearch}`);
-      if (!res.ok) throw new Error('Failed to fetch trips');
-      return res.json();
+      // Note: You will need to ensure your NestJS backend has a GET /trips endpoint
+      const response = await api.get(`/trips?search=${search}`);
+      return response.data;
     },
   });
 
-  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setActiveSearch(searchTerm);
-  };
+  const lastUpdatedTime = new Date(dataUpdatedAt).toLocaleTimeString("en-KE", {
+    timeZone: "Africa/Nairobi",
+  });
 
   return (
-    <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+    <DashboardLayout>
+      <div className="p-6 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-extrabold">Trip Management</h1>
-            <p className="text-xs text-slate-500 mt-1">Monitor and manage all rides across the platform.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Trip Monitoring</h1>
+            <p className="text-sm text-gray-500">Live view of all active and completed rides.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm flex items-center gap-2">
-              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-              Last updated: {lastUpdated}
-            </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+            <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'}`}></span>
+            Last updated: {lastUpdatedTime}
           </div>
         </div>
 
-        {isError && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-sm">
-            Failed to connect to the backend. Please check your Render server.
-          </div>
-        )}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by Trip ID or Booking Ref..."
+            className="w-full max-w-md p-2 border border-gray-300 rounded-md text-black"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
 
-        <div className="bg-white border border-[#dfe7f1] rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-[#dfe7f1] bg-[#f7f9fc] flex justify-between items-center">
-            <form onSubmit={handleSearch} className="relative w-96">
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search by Trip ID, Customer, or Rider..." 
-                className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffbd19] text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </form>
-            <div className="text-xs text-slate-500 font-semibold">
-              Showing {trips?.length || 0} recent trips
-            </div>
-          </div>
-
-          <table className="w-full text-left whitespace-nowrap">
-            <thead>
-              <tr className="bg-white text-[#51627d] text-[10px] uppercase border-b border-[#edf1f6]">
-                <th className="p-4 font-bold">Trip ID</th>
-                <th className="p-4 font-bold">Customer</th>
-                <th className="p-4 font-bold">Rider</th>
-                <th className="p-4 font-bold">Pickup Lat/Lng</th>
-                <th className="p-4 font-bold">Dropoff Lat/Lng</th>
-                <th className="p-4 font-bold">Fare</th>
-                <th className="p-4 font-bold">Status</th>
-                <th className="p-4 font-bold">Date</th>
+        <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="p-4 font-semibold text-gray-600">Booking Ref</th>
+                <th className="p-4 font-semibold text-gray-600">Customer</th>
+                <th className="p-4 font-semibold text-gray-600">Rider</th>
+                <th className="p-4 font-semibold text-gray-600">Route</th>
+                <th className="p-4 font-semibold text-gray-600">Fare (KES)</th>
+                <th className="p-4 font-semibold text-gray-600">Status</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
-                <tr><td colSpan={8} className="p-8 text-center text-slate-500">Loading trips...</td></tr>
-              ) : trips?.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-slate-500">No trips found.</td></tr>
-              ) : (
-                trips?.map((trip: any) => (
-                  <tr key={trip.id} className="border-t border-[#edf1f6] text-xs hover:bg-gray-50">
-                    <td className="p-4 font-mono text-gray-500">{trip.id.substring(0, 8)}</td>
-                    <td className="p-4 font-semibold">{trip.customer?.email || 'N/A'}</td>
-                    <td className="p-4">{trip.rider?.email || <span className="text-orange-500 italic">Unassigned</span>}</td>
-                    <td className="p-4">{trip.pickupLat.toFixed(4)}, {trip.pickupLng.toFixed(4)}</td>
-                    <td className="p-4">{trip.dropoffLat.toFixed(4)}, {trip.dropoffLng.toFixed(4)}</td>
-                    <td className="p-4 font-bold text-green-600">KSh {trip.estimatedFare}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-[9px] font-bold ${
-                        trip.status === 'COMPLETED' ? 'bg-[#dcfce7] text-[#15803d]' : 
-                        trip.status === 'ACCEPTED' ? 'bg-[#dbeafe] text-[#1d4ed8]' : 
-                        trip.status === 'REQUESTED' ? 'bg-[#fef3c7] text-[#a16207]' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {trip.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-gray-500">{new Date(trip.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                ))
-              )}
+              {isLoading && <tr><td colSpan={6} className="p-8 text-center text-gray-500">Loading trips...</td></tr>}
+              {!isLoading && trips?.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-500">No trips found.</td></tr>}
+              
+              {trips?.map((trip: Trip) => (
+                <tr key={trip.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="p-4 font-medium text-gray-900">{trip.bookingRef}</td>
+                  <td className="p-4 text-gray-700">{trip.customer?.firstName || 'N/A'}</td>
+                  <td className="p-4 text-gray-700">{trip.rider?.firstName || 'Searching...'}</td>
+                  <td className="p-4 text-sm text-gray-500">
+                    {trip.pickupAddress?.substring(0, 20)}... <br/> to <br/> {trip.destinationAddress?.substring(0, 20)}...
+                  </td>
+                  <td className="p-4 text-gray-900 font-semibold">{trip.fare?.toFixed(2) || '0.00'}</td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      trip.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 
+                      trip.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {trip.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
