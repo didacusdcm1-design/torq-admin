@@ -11,7 +11,7 @@ export default function RidersPage() {
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [localRiders, setLocalRiders] = useState<any[]>([]);
 
-  const { data: ridersResponse, isLoading, dataUpdatedAt, refetch } = useQuery({
+  const { data: ridersResponse, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["riders", search],
     queryFn: async () => {
       const response = await api.get(`/riders?search=${search}`);
@@ -19,6 +19,7 @@ export default function RidersPage() {
       setLocalRiders(riders); 
       return riders;
     },
+    refetchInterval: false, // <-- AUTO-REFRESH DISABLED
   });
 
   const pendingCount = localRiders.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING_REVIEW' || !r.riderProfile?.verificationStatus).length;
@@ -29,13 +30,13 @@ export default function RidersPage() {
       return await api.patch(`/riders/approve/${userId}`);
     },
     onSuccess: (data, userId) => {
-      // Instant UI update
       setLocalRiders(prev => prev.map(r => 
         r.id === userId 
           ? { ...r, riderProfile: { ...r.riderProfile, verificationStatus: 'APPROVED' } } 
           : r
       ));
       setSelectedRider(null);
+      alert("Rider Approved!");
     },
     onError: (err: any) => {
       console.error("Approve error:", err);
@@ -54,6 +55,7 @@ export default function RidersPage() {
           : r
       ));
       setSelectedRider(null);
+      alert("Rider Rejected.");
     },
     onError: (err: any) => {
       console.error("Reject error:", err);
@@ -142,7 +144,6 @@ export default function RidersPage() {
           </table>
         </div>
 
-        {/* DETAILS MODAL */}
         {selectedRider && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
