@@ -16,26 +16,29 @@ export default function TripDetailsClient() {
       const response = await api.get(`/trips/${tripId}`);
       return response.data;
     },
+    retry: 1, // Don't retry endlessly if backend is down
   });
 
-  if (isLoading) return <div className="p-10 text-center">Loading trip details...</div>;
+  if (isLoading) return <div className="p-10 text-center text-gray-500">Loading trip details...</div>;
   if (isError) return <div className="p-10 text-center text-red-500">Failed to load trip. Ensure backend is awake.</div>;
+  if (!trip) return <div className="p-10 text-center text-gray-500">Trip not found.</div>;
 
-  const displayTrip = trip || {
-    id: tripId,
-    bookingRef: "TRQ-8492A",
-    status: "COMPLETED",
-    pickupAddress: "Westlands, Nairobi",
-    destinationAddress: "JKIA Terminal 1A",
-    createdAt: new Date().toISOString(),
-    fare: 1500,
-    commission: 225,
-    riderEarnings: 1275,
-    paymentMethod: "M-PESA",
-    paymentStatus: "SUCCESSFUL",
-    pickupPin: "4921",
-    rider: { firstName: "Chadrick", lastName: "Didacus", phone: "0712345678" },
-    customer: { firstName: "Jane", lastName: "Doe", phone: "0722334455" }
+  // SAFE FALLBACKS: If the database doesn't have these fields, use these defaults so React doesn't crash
+  const safeTrip = {
+    id: trip.id || tripId,
+    bookingRef: trip.bookingRef || trip.id?.substring(0, 8) || "UNKNOWN",
+    status: trip.status || "UNKNOWN",
+    pickupAddress: trip.pickupAddress || `Lat: ${trip.pickupLat || 'N/A'}, Lng: ${trip.pickupLng || 'N/A'}`,
+    destinationAddress: trip.destinationAddress || `Lat: ${trip.dropoffLat || 'N/A'}, Lng: ${trip.dropoffLng || 'N/A'}`,
+    createdAt: trip.createdAt || new Date().toISOString(),
+    fare: Number(trip.finalFare || trip.estimatedFare || 0),
+    commission: Number(trip.finalFare || trip.estimatedFare || 0) * 0.15,
+    riderEarnings: Number(trip.finalFare || trip.estimatedFare || 0) * 0.85,
+    paymentMethod: trip.paymentMethod || "CASH",
+    paymentStatus: trip.paymentStatus || "PENDING",
+    pickupPin: trip.pickupPin || "----",
+    rider: trip.rider || { firstName: "Unassigned", lastName: "", phone: "N/A" },
+    customer: trip.customer || { firstName: "Unknown", lastName: "", phone: trip.customer?.phone || "N/A" }
   };
 
   return (
@@ -46,14 +49,14 @@ export default function TripDetailsClient() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            Trip {displayTrip.bookingRef}
+            Trip {safeTrip.bookingRef}
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              displayTrip.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+              safeTrip.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
             }`}>
-              {displayTrip.status}
+              {safeTrip.status}
             </span>
           </h1>
-          <p className="text-sm text-gray-500">Created on {new Date(displayTrip.createdAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
+          <p className="text-sm text-gray-500">Created on {new Date(safeTrip.createdAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
         </div>
       </div>
 
@@ -68,7 +71,7 @@ export default function TripDetailsClient() {
                 </div>
                 <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] pl-4">
                   <div className="font-semibold text-gray-900">Pickup</div>
-                  <div className="text-sm text-gray-500">{displayTrip.pickupAddress}</div>
+                  <div className="text-sm text-gray-500">{safeTrip.pickupAddress}</div>
                 </div>
               </div>
               <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -77,7 +80,7 @@ export default function TripDetailsClient() {
                 </div>
                 <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] pl-4">
                   <div className="font-semibold text-gray-900">Destination</div>
-                  <div className="text-sm text-gray-500">{displayTrip.destinationAddress}</div>
+                  <div className="text-sm text-gray-500">{safeTrip.destinationAddress}</div>
                 </div>
               </div>
             </div>
@@ -87,13 +90,13 @@ export default function TripDetailsClient() {
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
               <ShieldCheck size={28} className="text-[#FCD34D] mb-2" />
               <h3 className="font-semibold text-gray-700">Pickup PIN</h3>
-              <div className="text-3xl font-mono font-bold tracking-widest mt-2 text-gray-900">{displayTrip.pickupPin}</div>
+              <div className="text-3xl font-mono font-bold tracking-widest mt-2 text-gray-900">{safeTrip.pickupPin}</div>
             </div>
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
               <Wallet size={28} className="text-green-500 mb-2" />
               <h3 className="font-semibold text-gray-700">Payment Status</h3>
-              <div className="text-lg font-bold mt-2 text-gray-900">{displayTrip.paymentMethod}</div>
-              <span className="mt-2 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">{displayTrip.paymentStatus}</span>
+              <div className="text-lg font-bold mt-2 text-gray-900">{safeTrip.paymentMethod}</div>
+              <span className="mt-2 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">{safeTrip.paymentStatus}</span>
             </div>
           </div>
         </div>
@@ -104,15 +107,15 @@ export default function TripDetailsClient() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Gross Trip Fare</span>
-                <span className="font-semibold text-gray-900">KES {displayTrip.fare.toFixed(2)}</span>
+                <span className="font-semibold text-gray-900">KES {safeTrip.fare.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">TORQ Commission (15%)</span>
-                <span className="font-semibold text-red-500">- KES {displayTrip.commission.toFixed(2)}</span>
+                <span className="font-semibold text-red-500">- KES {safeTrip.commission.toFixed(2)}</span>
               </div>
               <div className="pt-3 border-t border-gray-200 flex justify-between">
                 <span className="font-bold text-gray-900">Rider Net Earnings</span>
-                <span className="font-bold text-green-600 text-lg">KES {displayTrip.riderEarnings.toFixed(2)}</span>
+                <span className="font-bold text-green-600 text-lg">KES {safeTrip.riderEarnings.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -123,15 +126,15 @@ export default function TripDetailsClient() {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-600">C</div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">{displayTrip.customer.firstName} {displayTrip.customer.lastName}</div>
-                  <div className="text-xs text-gray-500">Customer • {displayTrip.customer.phone}</div>
+                  <div className="text-sm font-semibold text-gray-900">{safeTrip.customer.firstName} {safeTrip.customer.lastName}</div>
+                  <div className="text-xs text-gray-500">Customer • {safeTrip.customer.phone}</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#FCD34D] rounded-full flex items-center justify-center font-bold text-black">R</div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">{displayTrip.rider.firstName} {displayTrip.rider.lastName}</div>
-                  <div className="text-xs text-gray-500">Rider • {displayTrip.rider.phone}</div>
+                  <div className="text-sm font-semibold text-gray-900">{safeTrip.rider.firstName} {safeTrip.rider.lastName}</div>
+                  <div className="text-xs text-gray-500">Rider • {safeTrip.rider.phone}</div>
                 </div>
               </div>
             </div>
