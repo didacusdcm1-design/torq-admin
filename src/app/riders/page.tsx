@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,53 +11,55 @@ export default function RidersPage() {
   const [search, setSearch] = useState("");
   const [selectedRider, setSelectedRider] = useState<any>(null);
 
+  // We use a local state to force updates when you click approve
+  const [localRiders, setLocalRiders] = useState<any[]>([]);
+
   const { data: ridersResponse, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["riders", search],
     queryFn: async () => {
       const response = await api.get(`/riders?search=${search}`);
-      console.log("RIDERS API RESPONSE:", response.data); // <-- Debug log
-      return response.data;
+      const riders = Array.isArray(response.data) ? response.data.filter((u: any) => u.role === 'RIDER') : [];
+      setLocalRiders(riders); // Sync local state with fetched data
+      return riders;
     },
   });
 
-  const riders = Array.isArray(ridersResponse) ? ridersResponse.filter((u: any) => u.role === 'RIDER') : [];
-  
-  // DEBUG: Log the riders array to see if riderProfile is there
-  console.log("FILTERED RIDERS:", riders);
-
-  // Calculate counts safely
-  const pendingCount = riders.filter((r: any) => {
-    const status = r.riderProfile?.verificationStatus || r.riderProfile?.verification_status;
-    return status === 'PENDING_REVIEW' || !status;
-  }).length;
-
-  const approvedCount = riders.filter((r: any) => {
-    const status = r.riderProfile?.verificationStatus || r.riderProfile?.verification_status;
-    return status === 'APPROVED';
-  }).length;
+  // Calculate counts based on local state
+  const pendingCount = localRiders.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING_REVIEW' || !r.riderProfile?.verificationStatus).length;
+  const approvedCount = localRiders.filter((r: any) => r.riderProfile?.verificationStatus === 'APPROVED').length;
 
   const approveMutation = useMutation({
     mutationFn: async (userId: string) => {
       return await api.patch(`/riders/approve/${userId}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["riders"] });
+    onSuccess: (data, userId) => {
+      // INSTANT UPDATE: Manually change the status in the local state
+      setLocalRiders(prev => prev.map(r => 
+        r.id === userId 
+          ? { ...r, riderProfile: { ...r.riderProfile, verificationStatus: 'APPROVED' } } 
+          : r
+      ));
       setSelectedRider(null);
-      alert("Rider Approved Successfully!");
+      alert("Rider Approved!");
     },
-    onError: () => alert("Failed to approve rider.")
+    onError: () => alert("Failed to approve. Ensure backend is running.")
   });
 
   const rejectMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string, reason: string }) => {
       return await api.patch(`/riders/reject/${userId}`, { reason });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["riders"] });
+    onSuccess: (data, variables) => {
+      // INSTANT UPDATE: Manually change the status in the local state
+      setLocalRiders(prev => prev.map(r => 
+        r.id === variables.userId 
+          ? { ...r, riderProfile: { ...r.riderProfile, verificationStatus: 'REJECTED' } } 
+          : r
+      ));
       setSelectedRider(null);
       alert("Rider Rejected.");
     },
-    onError: () => alert("Failed to reject rider.")
+    onError: () => alert("Failed to reject.")
   });
 
   const lastUpdatedTime = new Date(dataUpdatedAt).toLocaleTimeString("en-KE", { timeZone: "Africa/Nairobi" });
@@ -83,7 +85,7 @@ export default function RidersPage() {
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Users size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Total Riders</span>
             </div>
-            <div className="text-3xl font-bold text-gray-900">{riders.length}</div>
+            <div className="text-3xl font-bold text-gray-900">{localRiders.length}</div>
           </div>
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
@@ -113,9 +115,8 @@ export default function RidersPage() {
               </tr>
             </thead>
             <tbody>
-              {riders.map((rider: any) => {
-                const status = rider.riderProfile?.verificationStatus || rider.riderProfile?.verification_status || 'PENDING_REVIEW';
-                
+              {localRiders.map((rider: any) => {
+                const status = rider.riderProfile?.verificationStatus || 'PENDING_REVIEW';
                 return (
                   <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="p-4 font-medium text-gray-900">{rider.riderProfile?.fullName || `Rider ${rider.id.substring(0, 4)}`}</td>
@@ -123,8 +124,8 @@ export default function RidersPage() {
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                         status === 'APPROVED' ? 'bg-green-100 text-green-700' : 
-                        status === 'PENDING_REVIEW' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                        status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
                       }`}>
                         {status}
                       </span>
