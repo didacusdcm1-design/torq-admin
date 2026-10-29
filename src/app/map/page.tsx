@@ -1,89 +1,131 @@
-﻿"use client";
+"use client";
 
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import dynamic from 'next/dynamic';
-import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { api } from "@/lib/api";
+import { MapPin } from "lucide-react";
 
-const MapWithNoSSR = dynamic(() => import('../MapComponent'), { ssr: false });
+// Dynamically import Leaflet components so they don't break SSR
+const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { ssr: false });
+const Polyline = dynamic(() => import('react-leaflet').then((mod) => mod.Polyline), { ssr: false });
 
-const Sidebar = () => {
-  return (
-    <aside className="w-[238px] bg-[#0b121b] text-[#e8eef8] flex flex-col z-20 shrink-0 h-screen">
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-700">
-        <b className="text-4xl italic text-[#ffbd19]">ϟ</b>
-        <div>
-          <div className="text-2xl font-extrabold text-white leading-none">TORQ</div>
-          <div className="text-[9px] tracking-widest mt-1">RIDE • DELIVER • CONNECT</div>
-        </div>
-      </div>
-      <nav className="flex-1 overflow-y-auto mt-2 px-2 space-y-1 pb-4">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>⌂</span> <span>Dashboard</span>
-        </Link>
-        <Link href="/trips" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>🚕</span> <span>Trip Management</span>
-        </Link>
-        <Link href="/map" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold bg-[#ffbd19] text-[#101827]">
-          <span>🗺️</span> <span>Live Map</span>
-        </Link>
-        <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>💰</span> <span>Fare & Pricing</span>
-        </Link>
-        <Link href="/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♙</span> <span>Customers</span>
-        </Link>
-        <Link href="/riders" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#d6deea] hover:bg-[#202b39]">
-          <span>♟</span> <span>Riders</span>
-        </Link>
-      </nav>
-      <div className="p-4 border-t border-slate-700 text-xs text-slate-400">
-        🟢 System Operational<br/><br/>TORQ Admin • Live Data
-      </div>
-    </aside>
-  );
-};
+// Need to import Leaflet CSS
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for missing marker icons in Leaflet with Next.js
+const iconProto = L.Icon.Default.prototype as any;
+delete iconProto._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom icons for Pickup and Dropoff
+const pickupIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const dropoffIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 export default function LiveMapPage() {
-  const { data: trips, isLoading, dataUpdatedAt } = useQuery({
-    queryKey: ['liveTrips'],
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const { data: tripsResponse, isLoading } = useQuery({
+    queryKey: ["trips-map"],
     queryFn: async () => {
-      const res = await fetch('https://torq-backend.onrender.com/trips/admin/all');
-      if (!res.ok) throw new Error('Failed to fetch trips');
-      return res.json();
+      const response = await api.get('/trips');
+      return response.data;
     },
   });
 
-  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'Loading...';
+  // Filter for active trips only (REQUESTED, ACCEPTED, IN_PROGRESS)
+  const activeTrips = Array.isArray(tripsResponse) 
+    ? tripsResponse.filter((t: any) => ['REQUESTED', 'ACCEPTED', 'IN_PROGRESS'].includes(t.status))
+    : [];
 
-  const activeTrips = trips?.filter((t: any) => ['REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(t.status)) || [];
+  // Default center to Nairobi
+  const defaultCenter: [number, number] = [-1.286389, 36.817223];
 
   return (
-    <div className="flex h-screen bg-[#f4f7fb] font-sans text-[#10203e] overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-5 flex flex-col">
-        <div className="flex justify-between items-start mb-4">
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-2xl font-extrabold">Live Operations Map</h1>
-            <p className="text-xs text-slate-500 mt-1">Real-time view of active trips across Nairobi.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Live Operations Map</h1>
+            <p className="text-sm text-gray-500">Real-time view of active trips and rider locations.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xs bg-white border rounded-lg px-3 py-2 shadow-sm flex items-center gap-2">
-              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-              Last updated: {lastUpdated}
-            </div>
+          <div className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg shadow-sm">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span className="text-sm font-medium text-gray-700">{activeTrips.length} Active Trips</span>
           </div>
         </div>
 
-        <div className="bg-white border border-[#dfe7f1] rounded-xl shadow-sm p-3 flex-1 flex flex-col">
-          <div className="flex justify-between items-center mb-3">
-            <b className="text-sm">Active Trips <span className="text-green-500">●</span> <small className="font-normal text-slate-500">({activeTrips.length} active)</small></b>
-          </div>
-          <div className="flex-1 rounded-lg overflow-hidden border relative">
-            <MapWithNoSSR trips={activeTrips} />
-          </div>
+        <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden relative z-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full text-gray-500">Loading map data...</div>
+          ) : isMounted ? (
+            <MapContainer center={defaultCenter} zoom={12} style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              
+              {activeTrips.map((trip: any) => (
+                <div key={trip.id}>
+                  {/* Pickup Marker */}
+                  <Marker position={[trip.pickupLat, trip.pickupLng]} icon={pickupIcon}>
+                    <Popup>
+                      <div className="font-semibold text-green-600">Pickup</div>
+                      <div className="text-xs text-gray-500">Trip: {trip.id.substring(0,8)}</div>
+                      <div className="text-xs text-gray-500">Status: {trip.status}</div>
+                    </Popup>
+                  </Marker>
+
+                  {/* Dropoff Marker */}
+                  <Marker position={[trip.dropoffLat, trip.dropoffLng]} icon={dropoffIcon}>
+                    <Popup>
+                      <div className="font-semibold text-red-600">Destination</div>
+                      <div className="text-xs text-gray-500">Fare: KES {trip.estimatedFare}</div>
+                    </Popup>
+                  </Marker>
+
+                  {/* Line connecting them */}
+                  <Polyline 
+                    positions={[[trip.pickupLat, trip.pickupLng], [trip.dropoffLat, trip.dropoffLng]]}
+                    pathOptions={{ color: '#FCD34D', dashArray: '5, 10', weight: 3 }}
+                  />
+                </div>
+              ))}
+            </MapContainer>
+          ) : null}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
