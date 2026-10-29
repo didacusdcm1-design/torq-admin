@@ -9,61 +9,41 @@ import { Users, CheckCircle2, Clock, X, ShieldAlert, Bike, FileText } from "luci
 export default function RidersPage() {
   const [search, setSearch] = useState("");
   const [selectedRider, setSelectedRider] = useState<any>(null);
-  const [localRiders, setLocalRiders] = useState<any[]>([]);
 
-  const { data: ridersResponse, isLoading, dataUpdatedAt } = useQuery({
+  const { data: localRiders, isLoading, refetch } = useQuery({
     queryKey: ["riders", search],
     queryFn: async () => {
       const response = await api.get(`/riders?search=${search}`);
-      const riders = Array.isArray(response.data) ? response.data.filter((u: any) => u.role === 'RIDER') : [];
-      setLocalRiders(riders); 
-      return riders;
+      return Array.isArray(response.data) ? response.data : [];
     },
-    refetchInterval: false, // <-- AUTO-REFRESH DISABLED
+    refetchInterval: false,
+    refetchOnMount: 'always',
   });
 
-  const pendingCount = localRiders.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING_REVIEW' || !r.riderProfile?.verificationStatus).length;
-  const approvedCount = localRiders.filter((r: any) => r.riderProfile?.verificationStatus === 'APPROVED').length;
+  const pendingCount = localRiders?.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING_REVIEW' || !r.riderProfile?.verificationStatus).length || 0;
+  const approvedCount = localRiders?.filter((r: any) => r.riderProfile?.verificationStatus === 'APPROVED').length || 0;
 
   const approveMutation = useMutation({
     mutationFn: async (userId: string) => {
       return await api.patch(`/riders/approve/${userId}`);
     },
-    onSuccess: (data, userId) => {
-      setLocalRiders(prev => prev.map(r => 
-        r.id === userId 
-          ? { ...r, riderProfile: { ...r.riderProfile, verificationStatus: 'APPROVED' } } 
-          : r
-      ));
+    onSuccess: () => {
+      refetch(); // Re-fetch directly from database
       setSelectedRider(null);
-      alert("Rider Approved!");
     },
-    onError: (err: any) => {
-      console.error("Approve error:", err);
-      alert(`Failed to approve: ${err.response?.data?.message || 'Server error'}`);
-    }
+    onError: (err: any) => alert(`Failed: ${err.response?.data?.message || 'Error'}`)
   });
 
   const rejectMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string, reason: string }) => {
       return await api.patch(`/riders/reject/${userId}`, { reason });
     },
-    onSuccess: (data, variables) => {
-      setLocalRiders(prev => prev.map(r => 
-        r.id === variables.userId 
-          ? { ...r, riderProfile: { ...r.riderProfile, verificationStatus: 'REJECTED' } } 
-          : r
-      ));
+    onSuccess: () => {
+      refetch(); 
       setSelectedRider(null);
-      alert("Rider Rejected.");
     },
-    onError: (err: any) => {
-      console.error("Reject error:", err);
-      alert(`Failed to reject: ${err.response?.data?.message || 'Server error'}`);
-    }
+    onError: (err: any) => alert(`Failed: ${err.response?.data?.message || 'Error'}`)
   });
-
-  const lastUpdatedTime = new Date(dataUpdatedAt).toLocaleTimeString("en-KE", { timeZone: "Africa/Nairobi" });
 
   return (
     <DashboardLayout>
@@ -73,10 +53,6 @@ export default function RidersPage() {
             <h1 className="text-2xl font-bold text-gray-900">Riders & Drivers</h1>
             <p className="text-sm text-gray-500">Approve new riders and manage the fleet.</p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
-            <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'}`}></span>
-            Last updated: {lastUpdatedTime}
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -85,7 +61,7 @@ export default function RidersPage() {
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Users size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Total Riders</span>
             </div>
-            <div className="text-3xl font-bold text-gray-900">{localRiders.length}</div>
+            <div className="text-3xl font-bold text-gray-900">{localRiders?.length || 0}</div>
           </div>
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
@@ -114,7 +90,7 @@ export default function RidersPage() {
               </tr>
             </thead>
             <tbody>
-              {localRiders.map((rider: any) => {
+              {localRiders?.map((rider: any) => {
                 const status = rider.riderProfile?.verificationStatus || 'PENDING_REVIEW';
                 return (
                   <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -148,7 +124,7 @@ export default function RidersPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-                <h2 className="text-xl font-bold text-gray-900">Rider Verification Details</h2>
+                <h2 className="text-xl font-bold text-gray-900">Rider Verification</h2>
                 <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
               </div>
 
@@ -159,27 +135,6 @@ export default function RidersPage() {
                     <div><span className="text-gray-500 block">Full Name</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.fullName || 'N/A'}</span></div>
                     <div><span className="text-gray-500 block">Phone</span> <span className="font-medium text-gray-900">{selectedRider.phone}</span></div>
                     <div><span className="text-gray-500 block">National ID</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.nationalId || 'N/A'}</span></div>
-                    <div><span className="text-gray-500 block">Emergency Contact</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.emergencyContact || 'N/A'}</span></div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><FileText size={16}/> Documents</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                    <div><span className="text-gray-500 block">Driver's License No.</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.licenseNumber || 'N/A'}</span></div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">License Photo<br/>(Simulated)</div>
-                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">Rider Selfie<br/>(Simulated)</div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Bike size={16}/> Motorcycle</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500 block">Make & Model</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeMake} {selectedRider.riderProfile?.bikeModel}</span></div>
-                    <div><span className="text-gray-500 block">Color</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeColor || 'N/A'}</span></div>
-                    <div><span className="text-gray-500 block">Registration</span> <span className="font-medium text-gray-900 font-bold">{selectedRider.riderProfile?.bikeReg || 'N/A'}</span></div>
                   </div>
                 </div>
               </div>
@@ -191,17 +146,17 @@ export default function RidersPage() {
                     if(reason) rejectMutation.mutate({ userId: selectedRider.id, reason });
                   }}
                   disabled={rejectMutation.isPending}
-                  className="px-6 py-2.5 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200"
                 >
-                  Reject Application
+                  Reject
                 </button>
                 <button 
                   onClick={() => approveMutation.mutate(selectedRider.id)}
                   disabled={approveMutation.isPending || selectedRider.riderProfile?.verificationStatus === 'APPROVED'}
-                  className="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 flex items-center gap-2"
                 >
                   <CheckCircle2 size={18} />
-                  {selectedRider.riderProfile?.verificationStatus === 'APPROVED' ? 'Already Approved' : 'Approve Rider'}
+                  Approve Rider
                 </button>
               </div>
             </div>
