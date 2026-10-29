@@ -9,7 +9,7 @@ import { Users, CheckCircle2, Clock, X, ShieldAlert, Bike, FileText } from "luci
 export default function RidersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [selectedRider, setSelectedRider] = useState<any>(null); // For the modal
+  const [selectedRider, setSelectedRider] = useState<any>(null);
 
   const { data: ridersResponse, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["riders", search],
@@ -28,9 +28,11 @@ export default function RidersPage() {
       return await api.patch(`/riders/approve/${userId}`);
     },
     onSuccess: () => {
+      // 1. Tell React Query to refetch the riders list immediately
       queryClient.invalidateQueries({ queryKey: ["riders"] });
+      // 2. Close the modal
+      setSelectedRider(null);
       alert("Rider Approved Successfully!");
-      setSelectedRider(null); // Close modal
     },
     onError: () => alert("Failed to approve rider.")
   });
@@ -40,9 +42,11 @@ export default function RidersPage() {
       return await api.patch(`/riders/reject/${userId}`, { reason });
     },
     onSuccess: () => {
+      // 1. Tell React Query to refetch the riders list immediately
       queryClient.invalidateQueries({ queryKey: ["riders"] });
+      // 2. Close the modal
+      setSelectedRider(null);
       alert("Rider Rejected.");
-      setSelectedRider(null); // Close modal
     },
     onError: () => alert("Failed to reject rider.")
   });
@@ -137,7 +141,6 @@ export default function RidersPage() {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Personal Info */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><ShieldAlert size={16}/> Identity & Contact</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -148,23 +151,17 @@ export default function RidersPage() {
                   </div>
                 </div>
 
-                {/* Documents */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><FileText size={16}/> Documents</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                     <div><span className="text-gray-500 block">Driver's License No.</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.licenseNumber || 'N/A'}</span></div>
                   </div>
                   <div className="flex gap-4">
-                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">
-                      License Photo<br/>(Simulated)
-                    </div>
-                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">
-                      Rider Selfie<br/>(Simulated)
-                    </div>
+                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">License Photo<br/>(Simulated)</div>
+                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">Rider Selfie<br/>(Simulated)</div>
                   </div>
                 </div>
 
-                {/* Motorcycle Details */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Bike size={16}/> Motorcycle</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -175,7 +172,6 @@ export default function RidersPage() {
                 </div>
               </div>
 
-              {/* Modal Actions */}
               <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
                 <button 
                   onClick={() => {
