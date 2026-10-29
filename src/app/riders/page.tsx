@@ -1,73 +1,61 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { api } from "@/lib/api";
+import { Users, CheckCircle2, Clock, XCircle, Search, ShieldAlert } from "lucide-react";
 
 type Rider = {
   id: string;
-  firstName?: string;
-  lastName?: string;
+  phone: string;
   email: string;
-  phone?: string;
-  status: string;
+  isOnline: boolean;
+  createdAt: string;
+  role: string;
 };
 
-export default function RiderManagementPage() {
+export default function RidersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data: ridersResponse, isLoading, isError, error, dataUpdatedAt } = useQuery({
+  const { data: ridersResponse, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["riders", search],
     queryFn: async () => {
+      // We fetch all users and filter by role on the frontend for this view
       const response = await api.get(`/riders?search=${search}`);
-      console.log("RAW API RESPONSE:", response.data); // Debugging log
       return response.data;
     },
   });
 
-  // Safely extract the array in case the backend returns { data: [...] } or { riders: [...] }
+  // Safe array extraction
   const riders: Rider[] = Array.isArray(ridersResponse) 
-    ? ridersResponse 
-    : (ridersResponse?.data || ridersResponse?.riders || []);
+    ? ridersResponse.filter((u: any) => u.role === 'RIDER') 
+    : [];
 
-  const rejectMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return await api.patch(`/riders/${id}/reject`, { reason });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["riders"] });
-      setIsModalOpen(false);
-      setRejectReason("");
-      setSelectedRider(null);
-    },
-    onError: (error: any) => {
-      alert(error.response?.data?.message || "Failed to reject rider");
-    }
-  });
-
-  const handleRejectSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedRider && rejectReason.trim()) {
-      rejectMutation.mutate({ id: selectedRider.id, reason: rejectReason });
-    }
-  };
+  // Calculate KPIs
+  const totalRiders = riders.length;
+  const onlineRiders = riders.filter(r => r.isOnline).length;
+  const offlineRiders = totalRiders - onlineRiders;
 
   const lastUpdatedTime = new Date(dataUpdatedAt).toLocaleTimeString("en-KE", {
     timeZone: "Africa/Nairobi",
   });
 
+  // Format phone for display
+  const formatPhone = (phone: string) => {
+    if (!phone) return 'N/A';
+    return phone;
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Rider Management</h1>
-            <p className="text-sm text-gray-500">View, approve, reject, and manage all registered riders.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Riders & Drivers</h1>
+            <p className="text-sm text-gray-500">Manage all registered motorcycle operators.</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
             <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'}`}></span>
@@ -75,65 +63,100 @@ export default function RiderManagementPage() {
           </div>
         </div>
 
-        <div className="mb-4">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Users size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Total Riders</span>
+            </div>
+            <div className="text-3xl font-bold text-gray-900">{totalRiders}</div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-green-100 rounded-lg text-green-600"><CheckCircle2 size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Online Now</span>
+            </div>
+            <div className="text-3xl font-bold text-green-600">{onlineRiders}</div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-gray-100 rounded-lg text-gray-600"><Clock size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Offline</span>
+            </div>
+            <div className="text-3xl font-bold text-gray-900">{offlineRiders}</div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={18} className="text-gray-400" />
+          </div>
           <input
             type="text"
-            placeholder="Search riders by email or name..."
-            className="w-full max-w-md p-2 border border-gray-300 rounded-md text-black"
+            placeholder="Search riders by phone or email..."
+            className="w-full max-w-md pl-10 p-2.5 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-[#FCD34D]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
+        {/* Riders Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
           <table className="w-full text-left border-collapse">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="p-4 font-semibold text-gray-600">Rider Name / Email</th>
-                <th className="p-4 font-semibold text-gray-600">Phone Number</th>
+                <th className="p-4 font-semibold text-gray-600">Rider</th>
+                <th className="p-4 font-semibold text-gray-600">Contact</th>
                 <th className="p-4 font-semibold text-gray-600">Status</th>
+                <th className="p-4 font-semibold text-gray-600">Joined</th>
                 <th className="p-4 font-semibold text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={4} className="p-8 text-center text-gray-500">Loading riders...</td></tr>}
-              
-              {isError && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-red-500 font-medium">
-                    Error connecting to backend: {(error as any)?.message}
-                  </td>
-                </tr>
-              )}
-
-              {!isLoading && !isError && riders.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-gray-500">No riders found in the database.</td></tr>
-              )}
+              {isLoading && <tr><td colSpan={5} className="p-8 text-center text-gray-500">Loading riders...</td></tr>}
+              {!isLoading && riders.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-500">No riders found.</td></tr>}
               
               {riders.map((rider: Rider) => (
-                <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="p-4">
-                    <div className="font-medium text-gray-900">
-                      {rider.firstName || 'Unknown'} {rider.lastName || ''}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
+                        {rider.phone ? rider.phone.substring(0,2) : 'R'}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">Rider {rider.id.substring(0, 4)}</div>
+                        <div className="text-xs text-gray-500">ID: {rider.id.substring(0, 8)}</div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500">{rider.email}</div>
                   </td>
-                  <td className="p-4 text-gray-700">{rider.phone || 'N/A'}</td>
                   <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      rider.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 
-                      rider.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {rider.status}
-                    </span>
+                    <div className="text-sm font-medium text-gray-900">{formatPhone(rider.phone)}</div>
+                    <div className="text-sm text-gray-500">{rider.email || 'No email'}</div>
+                  </td>
+                  <td className="p-4">
+                    {rider.isOnline ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Offline
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4 text-sm text-gray-500">
+                    {new Date(rider.createdAt).toLocaleDateString('en-KE')}
                   </td>
                   <td className="p-4">
                     <button 
-                      onClick={() => { setSelectedRider(rider); setIsModalOpen(true); }}
-                      className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      onClick={() => alert("Rider details modal coming soon.")}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
                     >
-                      View / Reject
+                      View Profile
                     </button>
                   </td>
                 </tr>
@@ -141,31 +164,6 @@ export default function RiderManagementPage() {
             </tbody>
           </table>
         </div>
-
-        {isModalOpen && selectedRider && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Reject Rider: {selectedRider.firstName || 'Unknown'}</h2>
-              <form onSubmit={handleRejectSubmit}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Rejection</label>
-                <textarea
-                  required
-                  className="w-full p-2 border border-gray-300 rounded-md mb-4 text-black"
-                  rows={3}
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="e.g., Invalid driving license document..."
-                />
-                <div className="flex justify-end gap-3">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
-                  <button type="submit" disabled={rejectMutation.isPending} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50">
-                    {rejectMutation.isPending ? "Rejecting..." : "Confirm Rejection"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );
