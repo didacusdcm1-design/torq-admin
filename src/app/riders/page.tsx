@@ -28,7 +28,7 @@ export default function RidersPage() {
       return await api.patch(`/riders/approve/${userId}`);
     },
     onSuccess: () => {
-      refetch(); // Re-fetch directly from database
+      refetch(); 
       setSelectedRider(null);
     },
     onError: (err: any) => alert(`Failed: ${err.response?.data?.message || 'Error'}`)
@@ -120,21 +120,46 @@ export default function RidersPage() {
           </table>
         </div>
 
+        {/* DETAILS MODAL WITH FULL DATA RESTORED */}
         {selectedRider && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-                <h2 className="text-xl font-bold text-gray-900">Rider Verification</h2>
+                <h2 className="text-xl font-bold text-gray-900">Rider Verification Details</h2>
                 <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
               </div>
 
               <div className="p-6 space-y-6">
+                {/* Identity */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><ShieldAlert size={16}/> Identity & Contact</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500 block">Full Name</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.fullName || 'N/A'}</span></div>
                     <div><span className="text-gray-500 block">Phone</span> <span className="font-medium text-gray-900">{selectedRider.phone}</span></div>
                     <div><span className="text-gray-500 block">National ID</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.nationalId || 'N/A'}</span></div>
+                    <div><span className="text-gray-500 block">Emergency Contact</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.emergencyContact || 'N/A'}</span></div>
+                  </div>
+                </div>
+
+                {/* Documents */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><FileText size={16}/> Documents</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                    <div><span className="text-gray-500 block">Driver's License No.</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.licenseNumber || 'N/A'}</span></div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">License Photo<br/>(Simulated)</div>
+                    <div className="flex-1 bg-gray-100 p-4 rounded-lg text-center text-gray-500 text-sm border border-dashed border-gray-300">Rider Selfie<br/>(Simulated)</div>
+                  </div>
+                </div>
+
+                {/* Motorcycle */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Bike size={16}/> Motorcycle</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500 block">Make & Model</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeMake} {selectedRider.riderProfile?.bikeModel}</span></div>
+                    <div><span className="text-gray-500 block">Color</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeColor || 'N/A'}</span></div>
+                    <div><span className="text-gray-500 block">Registration</span> <span className="font-medium text-gray-900 font-bold">{selectedRider.riderProfile?.bikeReg || 'N/A'}</span></div>
                   </div>
                 </div>
               </div>
@@ -146,17 +171,17 @@ export default function RidersPage() {
                     if(reason) rejectMutation.mutate({ userId: selectedRider.id, reason });
                   }}
                   disabled={rejectMutation.isPending}
-                  className="px-6 py-2.5 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200"
+                  className="px-6 py-2.5 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
                 >
-                  Reject
+                  Reject Application
                 </button>
                 <button 
                   onClick={() => approveMutation.mutate(selectedRider.id)}
                   disabled={approveMutation.isPending || selectedRider.riderProfile?.verificationStatus === 'APPROVED'}
-                  className="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  className="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   <CheckCircle2 size={18} />
-                  Approve Rider
+                  {selectedRider.riderProfile?.verificationStatus === 'APPROVED' ? 'Already Approved' : 'Approve Rider'}
                 </button>
               </div>
             </div>
