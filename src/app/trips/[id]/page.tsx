@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import { Suspense } from 'react';
 import TripDetailsClient from './TripDetailsClient';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
