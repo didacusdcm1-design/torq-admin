@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,7 +34,7 @@ export default function TripsPage() {
   const bookMutation = useMutation({
     mutationFn: async (newTrip: any) => {
       // Note: This requires a valid JWT token in the api interceptor
-      return await api.post('/trips/request', newTrip);
+      return await api.post('/trips/dispatch', newTrip);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trips"] });
