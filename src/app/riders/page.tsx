@@ -15,22 +15,33 @@ export default function RidersPage() {
     queryKey: ["riders", search],
     queryFn: async () => {
       const response = await api.get(`/riders?search=${search}`);
+      console.log("RIDERS API RESPONSE:", response.data); // <-- Debug log
       return response.data;
     },
   });
 
   const riders = Array.isArray(ridersResponse) ? ridersResponse.filter((u: any) => u.role === 'RIDER') : [];
-  const pendingCount = riders.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING_REVIEW').length;
-  const approvedCount = riders.filter((r: any) => r.riderProfile?.verificationStatus === 'APPROVED').length;
+  
+  // DEBUG: Log the riders array to see if riderProfile is there
+  console.log("FILTERED RIDERS:", riders);
+
+  // Calculate counts safely
+  const pendingCount = riders.filter((r: any) => {
+    const status = r.riderProfile?.verificationStatus || r.riderProfile?.verification_status;
+    return status === 'PENDING_REVIEW' || !status;
+  }).length;
+
+  const approvedCount = riders.filter((r: any) => {
+    const status = r.riderProfile?.verificationStatus || r.riderProfile?.verification_status;
+    return status === 'APPROVED';
+  }).length;
 
   const approveMutation = useMutation({
     mutationFn: async (userId: string) => {
       return await api.patch(`/riders/approve/${userId}`);
     },
     onSuccess: () => {
-      // 1. Tell React Query to refetch the riders list immediately
       queryClient.invalidateQueries({ queryKey: ["riders"] });
-      // 2. Close the modal
       setSelectedRider(null);
       alert("Rider Approved Successfully!");
     },
@@ -42,9 +53,7 @@ export default function RidersPage() {
       return await api.patch(`/riders/reject/${userId}`, { reason });
     },
     onSuccess: () => {
-      // 1. Tell React Query to refetch the riders list immediately
       queryClient.invalidateQueries({ queryKey: ["riders"] });
-      // 2. Close the modal
       setSelectedRider(null);
       alert("Rider Rejected.");
     },
@@ -104,29 +113,33 @@ export default function RidersPage() {
               </tr>
             </thead>
             <tbody>
-              {riders.map((rider: any) => (
-                <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-4 font-medium text-gray-900">{rider.riderProfile?.fullName || `Rider ${rider.id.substring(0, 4)}`}</td>
-                  <td className="p-4 text-gray-700">{rider.phone}</td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      rider.riderProfile?.verificationStatus === 'APPROVED' ? 'bg-green-100 text-green-700' : 
-                      rider.riderProfile?.verificationStatus === 'PENDING_REVIEW' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {rider.riderProfile?.verificationStatus || 'PENDING_REVIEW'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button 
-                      onClick={() => setSelectedRider(rider)}
-                      className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800"
-                    >
-                      View Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {riders.map((rider: any) => {
+                const status = rider.riderProfile?.verificationStatus || rider.riderProfile?.verification_status || 'PENDING_REVIEW';
+                
+                return (
+                  <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-4 font-medium text-gray-900">{rider.riderProfile?.fullName || `Rider ${rider.id.substring(0, 4)}`}</td>
+                    <td className="p-4 text-gray-700">{rider.phone}</td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        status === 'APPROVED' ? 'bg-green-100 text-green-700' : 
+                        status === 'PENDING_REVIEW' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {status}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <button 
+                        onClick={() => setSelectedRider(rider)}
+                        className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
