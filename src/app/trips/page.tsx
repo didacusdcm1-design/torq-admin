@@ -1,31 +1,25 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { api } from "@/lib/api";
 
-type Trip = {
-  id: string;
-  bookingRef: string;
-  status: string;
-  pickupAddress: string;
-  destinationAddress: string;
-  fare: number;
-  rider?: { firstName: string; lastName: string };
-  customer?: { firstName: string; lastName: string };
-};
-
 export default function TripsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
 
-  const { data: trips, isLoading, dataUpdatedAt } = useQuery({
+  const { data: tripsResponse, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["trips", search],
     queryFn: async () => {
       const response = await api.get(`/trips?search=${search}`);
+      console.log("TRIPS API RESPONSE:", response.data); // Debug log
       return response.data;
     },
   });
+
+  const trips = Array.isArray(tripsResponse) ? tripsResponse : [];
 
   const lastUpdatedTime = new Date(dataUpdatedAt).toLocaleTimeString("en-KE", {
     timeZone: "Africa/Nairobi",
@@ -48,8 +42,8 @@ export default function TripsPage() {
         <div className="mb-4">
           <input
             type="text"
-            placeholder="Search by Trip ID or Booking Ref..."
-            className="w-full max-w-md p-2 border border-gray-300 rounded-md text-black"
+            placeholder="Search by Trip ID..."
+            className="w-full max-w-md p-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-[#FCD34D]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -59,27 +53,23 @@ export default function TripsPage() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="p-4 font-semibold text-gray-600">Booking Ref</th>
-                <th className="p-4 font-semibold text-gray-600">Customer</th>
-                <th className="p-4 font-semibold text-gray-600">Rider</th>
-                <th className="p-4 font-semibold text-gray-600">Route</th>
-                <th className="p-4 font-semibold text-gray-600">Fare (KES)</th>
+                <th className="p-4 font-semibold text-gray-600">Trip ID</th>
                 <th className="p-4 font-semibold text-gray-600">Status</th>
+                <th className="p-4 font-semibold text-gray-600">Est. Fare (KES)</th>
+                <th className="p-4 font-semibold text-gray-600">Created At</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={6} className="p-8 text-center text-gray-500">Loading trips...</td></tr>}
-              {!isLoading && trips?.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-500">No trips found.</td></tr>}
+              {isLoading && <tr><td colSpan={4} className="p-8 text-center text-gray-500">Loading trips...</td></tr>}
+              {!isLoading && trips.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-gray-500">No trips found. Please run the /seed-trip endpoint first.</td></tr>}
               
-              {trips?.map((trip: Trip) => (
-                <tr key={trip.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-4 font-medium text-gray-900">{trip.bookingRef}</td>
-                  <td className="p-4 text-gray-700">{trip.customer?.firstName || 'N/A'}</td>
-                  <td className="p-4 text-gray-700">{trip.rider?.firstName || 'Searching...'}</td>
-                  <td className="p-4 text-sm text-gray-500">
-                    {trip.pickupAddress?.substring(0, 20)}... <br/> to <br/> {trip.destinationAddress?.substring(0, 20)}...
-                  </td>
-                  <td className="p-4 text-gray-900 font-semibold">{trip.fare?.toFixed(2) || '0.00'}</td>
+              {trips.map((trip: any) => (
+                <tr 
+                  key={trip.id} 
+                  onClick={() => router.push(`/trips/${trip.id}`)}
+                  className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <td className="p-4 font-medium text-gray-900">{trip.id.substring(0, 8)}...</td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                       trip.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 
@@ -88,6 +78,10 @@ export default function TripsPage() {
                     }`}>
                       {trip.status}
                     </span>
+                  </td>
+                  <td className="p-4 text-gray-900 font-semibold">{trip.estimatedFare || '0.00'}</td>
+                  <td className="p-4 text-sm text-gray-500">
+                    {new Date(trip.createdAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}
                   </td>
                 </tr>
               ))}
