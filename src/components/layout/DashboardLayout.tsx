@@ -1,5 +1,12 @@
-﻿import { ReactNode } from "react";
-import { Sidebar } from "./Sidebar";
+"use client";
+
+import { ReactNode } from "react";
+import dynamic from "next/dynamic";
+
+// Force the Sidebar to only render on the client side
+const Sidebar = dynamic(() => import("./Sidebar").then((mod) => mod.Sidebar), { 
+  ssr: false 
+});
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
