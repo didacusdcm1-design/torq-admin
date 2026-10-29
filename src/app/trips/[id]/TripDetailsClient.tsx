@@ -1,8 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { api } from "@/lib/api";
 import { ArrowLeft, MapPin, Navigation, ShieldCheck, Wallet } from "lucide-react";
 
