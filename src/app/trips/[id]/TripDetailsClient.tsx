@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { ArrowLeft, MapPin, Navigation, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, ShieldCheck, Wallet, ShieldAlert } from "lucide-react";
 
 export default function TripDetailsClient() {
   const params = useParams();
@@ -16,14 +16,13 @@ export default function TripDetailsClient() {
       const response = await api.get(`/trips/${tripId}`);
       return response.data;
     },
-    retry: 1, // Don't retry endlessly if backend is down
   });
 
   if (isLoading) return <div className="p-10 text-center text-gray-500">Loading trip details...</div>;
-  if (isError) return <div className="p-10 text-center text-red-500">Failed to load trip. Ensure backend is awake.</div>;
+  if (isError) return <div className="p-10 text-center text-red-500">Failed to load trip.</div>;
   if (!trip) return <div className="p-10 text-center text-gray-500">Trip not found.</div>;
 
-  // SAFE FALLBACKS: If the database doesn't have these fields, use these defaults so React doesn't crash
+  // Safe fallbacks
   const safeTrip = {
     id: trip.id || tripId,
     bookingRef: trip.bookingRef || trip.id?.substring(0, 8) || "UNKNOWN",
@@ -38,7 +37,10 @@ export default function TripDetailsClient() {
     paymentStatus: trip.paymentStatus || "PENDING",
     pickupPin: trip.pickupPin || "----",
     rider: trip.rider || { firstName: "Unassigned", lastName: "", phone: "N/A" },
-    customer: trip.customer || { firstName: "Unknown", lastName: "", phone: trip.customer?.phone || "N/A" }
+    customer: trip.customer || { firstName: "Unknown", lastName: "", phone: trip.customer?.phone || "N/A" },
+    cancelledBy: trip.cancelledBy,
+    cancellationReason: trip.cancellationReason,
+    cancellationNote: trip.cancellationNote
   };
 
   return (
@@ -51,7 +53,8 @@ export default function TripDetailsClient() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
             Trip {safeTrip.bookingRef}
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              safeTrip.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+              safeTrip.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 
+              safeTrip.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
             }`}>
               {safeTrip.status}
             </span>
@@ -59,6 +62,16 @@ export default function TripDetailsClient() {
           <p className="text-sm text-gray-500">Created on {new Date(safeTrip.createdAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
         </div>
       </div>
+
+      {/* CANCELLATION BANNER */}
+      {safeTrip.status === 'CANCELLED' && (
+        <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-xl">
+          <h3 className="text-red-800 font-bold mb-1 flex items-center gap-2"><ShieldAlert size={18}/> Trip Cancelled</h3>
+          <p className="text-red-700 text-sm">Cancelled By: <strong>{safeTrip.cancelledBy || 'Unknown'}</strong></p>
+          <p className="text-red-700 text-sm">Reason: {safeTrip.cancellationReason || 'No reason provided'}</p>
+          {safeTrip.cancellationNote && <p className="text-red-600 text-xs mt-1 italic">Note: "{safeTrip.cancellationNote}"</p>}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
