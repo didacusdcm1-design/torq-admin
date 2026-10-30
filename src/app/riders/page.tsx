@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -174,6 +174,18 @@ export default function RidersPage() {
                   className="px-6 py-2.5 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
                 >
                   Reject Application
+                </button>
+                <button 
+                  onClick={async () => {
+                    const newPass = prompt("Enter new password for this rider:");
+                    if (newPass) {
+                      await api.patch(`/riders/${selectedRider.id}/password`, { password: newPass });
+                      alert("Password updated successfully!");
+                    }
+                  }}
+                  className="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <ShieldCheck size={18} /> Reset Password
                 </button>
                 <button 
                   onClick={() => approveMutation.mutate(selectedRider.id)}
