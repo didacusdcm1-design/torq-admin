@@ -1,0 +1,162 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { api } from "@/lib/api";
+import { MapPin, Plus, CheckCircle2, XCircle } from "lucide-react";
+
+export default function ServiceAreasPage() {
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("Nairobi");
+
+  const { data: areas, isLoading } = useQuery({
+    queryKey: ["service-areas"],
+    queryFn: async () => {
+      const response = await api.get('/service-areas');
+      return response.data;
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (newArea: { name: string, city: string }) => {
+      return await api.post('/service-areas', newArea);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-areas"] });
+      setIsModalOpen(false);
+      setName("");
+    }
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await api.patch(`/service-areas/${id}/toggle`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-areas"] });
+    }
+  });
+
+  const activeCount = areas?.filter((a: any) => a.isActive).length || 0;
+  const totalCount = areas?.length || 0;
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Service Areas</h1>
+            <p className="text-sm text-gray-500">Manage the zones where TORQ operates.</p>
+          </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-[#FCD34D] text-black font-semibold px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors"
+          >
+            <Plus size={18} /> Add Service Area
+          </button>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><MapPin size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Total Zones</span>
+            </div>
+            <div className="text-3xl font-bold text-gray-900">{totalCount}</div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-green-100 rounded-lg text-green-600"><CheckCircle2 size={20}/></div>
+              <span className="text-sm text-gray-500 font-medium">Active Zones</span>
+            </div>
+            <div className="text-3xl font-bold text-green-600">{activeCount}</div>
+          </div>
+        </div>
+
+        {/* Areas Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="p-4 font-semibold text-gray-600">Zone Name</th>
+                <th className="p-4 font-semibold text-gray-600">City</th>
+                <th className="p-4 font-semibold text-gray-600">Status</th>
+                <th className="p-4 font-semibold text-gray-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={4} className="p-8 text-center text-gray-500">Loading areas...</td></tr>}
+              {!isLoading && areas?.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-gray-500">No service areas defined yet.</td></tr>}
+              
+              {areas?.map((area: any) => (
+                <tr key={area.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td className="p-4 font-medium text-gray-900">{area.name}</td>
+                  <td className="p-4 text-gray-700">{area.city}</td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      area.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {area.isActive ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <button 
+                      onClick={() => toggleMutation.mutate(area.id)}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        area.isActive 
+                          ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                          : 'bg-green-50 text-green-600 hover:bg-green-100'
+                      }`}
+                    >
+                      {area.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Add Area Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Add New Service Area</h2>
+              <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ name, city }); }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name</label>
+                    <input 
+                      type="text" required placeholder="e.g., Westlands"
+                      value={name} onChange={(e) => setName(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-black focus:ring-[#FCD34D] outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City / County</label>
+                    <input 
+                      type="text" required placeholder="e.g., Nairobi"
+                      value={city} onChange={(e) => setCity(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-black focus:ring-[#FCD34D] outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
+                  <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-[#FCD34D] text-black font-semibold rounded-md hover:bg-yellow-400 disabled:opacity-50">
+                    {createMutation.isPending ? "Creating..." : "Create Area"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
