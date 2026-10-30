@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -134,9 +134,18 @@ export default function RidersPage() {
                   </div>
                 </div>
 
-                                {/* DOCUMENTS */}
                 <div>
-                  <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><FileText size={16}/> Documents</h3>
+                  <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><Bike size={16}/> Motorcycle</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500 block">Make & Model</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeMake || 'N/A'} {selectedRider.riderProfile?.bikeModel || ''}</span></div>
+                    <div><span className="text-gray-500 block">Color</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeColor || 'N/A'}</span></div>
+                    <div><span className="text-gray-500 block">Registration</span> <span className="font-medium text-gray-900 font-bold">{selectedRider.riderProfile?.bikeReg || 'N/A'}</span></div>
+                  </div>
+                </div>
+
+                {/* DOCUMENTS SECTION */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><FileText size={16}/> Uploaded Documents</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Driver's License</p>
@@ -163,8 +172,6 @@ export default function RidersPage() {
                       ) : <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">No Image</div>}
                     </div>
                   </div>
-                </div>
-              </div>
                 </div>
               </div>
 
