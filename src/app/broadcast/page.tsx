@@ -14,7 +14,7 @@ export default function BroadcastPage() {
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://torq-api.onrender.com';
-      const res = await fetch(${API_URL}/notifications/broadcast, {
+      const res = await fetch(API_URL + '/notifications/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, message, target }),
