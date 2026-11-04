@@ -2,188 +2,272 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { api } from "@/lib/api";
-import { Users, CheckCircle2, Clock, X, ShieldAlert, Bike, FileText, Key } from "lucide-react";
+import { 
+  Search, 
+  CheckCircle2, 
+  XCircle, 
+  FileText, 
+  User, 
+  Phone, 
+  Bike, 
+  Key,
+  X
+} from "lucide-react";
 
 export default function RidersPage() {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedRider, setSelectedRider] = useState<any>(null);
+  const queryClient = useQueryClient();
 
-  const { data: ridersResponse, isLoading } = useQuery({
-    queryKey: ["riders", search],
+  const { data: riders, isLoading } = useQuery({
+    queryKey: ["riders"],
     queryFn: async () => {
-      const response = await api.get(`/riders?search=${search}`);
-      return response.data;
+      const res = await fetch("https://torq-backend.onrender.com/riders");
+      if (!res.ok) throw new Error("Failed to fetch riders");
+      return res.json();
     },
-    refetchInterval: false,
   });
 
-  const riders = Array.isArray(ridersResponse) ? ridersResponse.filter((u: any) => u.role === 'RIDER') : [];
-  const pendingCount = riders.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING_REVIEW' || !r.riderProfile?.verificationStatus).length;
-  const approvedCount = riders.filter((r: any) => r.riderProfile?.verificationStatus === 'APPROVED').length;
-
   const approveMutation = useMutation({
-    mutationFn: async (userId: string) => await api.patch(`/riders/approve/${userId}`),
+    mutationFn: async (userId: string) => {
+      await fetch(`https://torq-backend.onrender.com/riders/approve/${userId}`, { method: "PATCH" });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["riders"] });
       setSelectedRider(null);
-      alert("Rider Approved!");
     },
-    onError: (err: any) => alert(`Failed: ${err.response?.data?.message || 'Error'}`)
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async ({ userId, reason }: { userId: string, reason: string }) => await api.patch(`/riders/reject/${userId}`, { reason }),
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      await fetch(`https://torq-backend.onrender.com/riders/reject/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["riders"] });
       setSelectedRider(null);
-      alert("Rider Rejected.");
     },
-    onError: (err: any) => alert(`Failed: ${err.response?.data?.message || 'Error'}`)
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: async ({ userId, password }: { userId: string, password: string }) => {
-      return await api.patch(`/riders/${userId}/password`, { password });
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      await fetch(`https://torq-backend.onrender.com/riders/${userId}/password`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
     },
-    onSuccess: () => alert("Password reset successfully!")
+    onSuccess: () => alert("Password reset successfully"),
   });
 
+  const filteredRiders = riders?.filter((rider: any) => 
+    rider.name?.toLowerCase().includes(search.toLowerCase()) || 
+    rider.phone?.includes(search)
+  ) || [];
+
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Riders & Drivers</h1>
-          <p className="text-sm text-gray-500">Approve new riders and manage the fleet.</p>
+    <div className="p-8 bg-[#0a0a0a] min-h-screen text-white">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">Riders & Drivers</h1>
+          <p className="text-gray-400">Approve new riders and manage the fleet.</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Users size={20}/></div>
-              <span className="text-sm text-gray-500 font-medium">Total Riders</span>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{riders.length}</div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-green-100 rounded-lg text-green-600"><CheckCircle2 size={20}/></div>
-              <span className="text-sm text-gray-500 font-medium">Approved</span>
-            </div>
-            <div className="text-3xl font-bold text-green-600">{approvedCount}</div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600"><Clock size={20}/></div>
-              <span className="text-sm text-gray-500 font-medium">Pending Approval</span>
-            </div>
-            <div className="text-3xl font-bold text-yellow-600">{pendingCount}</div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="p-4 font-semibold text-gray-600">Rider Name</th>
-                <th className="p-4 font-semibold text-gray-600">Contact</th>
-                <th className="p-4 font-semibold text-gray-600">Status</th>
-                <th className="p-4 font-semibold text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {riders.map((rider: any) => {
-                const status = rider.riderProfile?.verificationStatus || 'PENDING_REVIEW';
-                return (
-                  <tr key={rider.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="p-4 font-medium text-gray-900">{rider.riderProfile?.fullName || `Rider ${rider.id.substring(0, 4)}`}</td>
-                    <td className="p-4 text-gray-700">{rider.phone}</td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${status === 'APPROVED' ? 'bg-green-100 text-green-700' : status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <button onClick={() => setSelectedRider(rider)} className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800">View Details</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {selectedRider && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-                <h2 className="text-xl font-bold text-gray-900">Rider Details</h2>
-                <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
-              </div>
-
-              <div className="p-6 space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><ShieldAlert size={16}/> Identity & Contact</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500 block">Full Name</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.fullName || 'N/A'}</span></div>
-                    <div><span className="text-gray-500 block">Phone</span> <span className="font-medium text-gray-900">{selectedRider.phone || 'N/A'}</span></div>
-                    <div><span className="text-gray-500 block">National ID</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.nationalId || 'N/A'}</span></div>
-                    <div><span className="text-gray-500 block">Emergency Contact</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.emergencyContact || 'N/A'}</span></div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><Bike size={16}/> Motorcycle</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500 block">Make & Model</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeMake || 'N/A'} {selectedRider.riderProfile?.bikeModel || ''}</span></div>
-                    <div><span className="text-gray-500 block">Color</span> <span className="font-medium text-gray-900">{selectedRider.riderProfile?.bikeColor || 'N/A'}</span></div>
-                    <div><span className="text-gray-500 block">Registration</span> <span className="font-medium text-gray-900 font-bold">{selectedRider.riderProfile?.bikeReg || 'N/A'}</span></div>
-                  </div>
-                </div>
-
-                {/* DOCUMENTS SECTION */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><FileText size={16}/> Uploaded Documents</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Driver's License</p>
-                      {selectedRider.riderProfile?.driversLicenseUrl ? (
-                        <img src={\https://torq-backend.onrender.com/\\} alt="License" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
-                      ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Insurance</p>
-                      {selectedRider.riderProfile?.insuranceUrl ? (
-                        <img src={\https://torq-backend.onrender.com/\\} alt="Insurance" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
-                      ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Bike Photo</p>
-                      {selectedRider.riderProfile?.bikePictureUrl ? (
-                        <img src={\https://torq-backend.onrender.com/\\} alt="Bike" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
-                      ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Selfie</p>
-                      {selectedRider.riderProfile?.passportPhotoUrl ? (
-                        <img src={\https://torq-backend.onrender.com/\\} alt="Selfie" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
-                      ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-gray-200 bg-gray-50 flex flex-wrap justify-end gap-3 rounded-b-xl">
-                <button onClick={() => { const reason = prompt("Reason:"); if(reason) rejectMutation.mutate({ userId: selectedRider.id, reason }); }} className="px-4 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200">Reject</button>
-                <button onClick={() => { const pass = prompt("Enter new password:"); if(pass) resetPasswordMutation.mutate({ userId: selectedRider.id, password: pass }); }} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-2"><Key size={16}/> Reset Password</button>
-                <button onClick={() => approveMutation.mutate(selectedRider.id)} disabled={selectedRider.riderProfile?.verificationStatus === 'APPROVED'} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"><CheckCircle2 size={18}/> {selectedRider.riderProfile?.verificationStatus === 'APPROVED' ? 'Approved' : 'Approve Rider'}</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-    </DashboardLayout>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="bg-[#1a1a1a] p-6 rounded-xl border border-gray-800">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-2 bg-[#FCD34D]/10 rounded-lg text-[#FCD34D]"><User size={20} /></div>
+            <p className="text-gray-400 font-medium">Total Riders</p>
+          </div>
+          <p className="text-3xl font-bold">{riders?.length || 0}</p>
+        </div>
+        <div className="bg-[#1a1a1a] p-6 rounded-xl border border-gray-800">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><CheckCircle2 size={20} /></div>
+            <p className="text-gray-400 font-medium">Approved</p>
+          </div>
+          <p className="text-3xl font-bold text-green-500">
+            {riders?.filter((r: any) => r.riderProfile?.verificationStatus === 'APPROVED').length || 0}
+          </p>
+        </div>
+        <div className="bg-[#1a1a1a] p-6 rounded-xl border border-gray-800">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500"><FileText size={20} /></div>
+            <p className="text-gray-400 font-medium">Pending Approval</p>
+          </div>
+          <p className="text-3xl font-bold text-yellow-500">
+            {riders?.filter((r: any) => r.riderProfile?.verificationStatus === 'PENDING').length || 0}
+          </p>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden">
+        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Rider List</h2>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search by name or phone..." 
+              className="bg-[#0a0a0a] border border-gray-700 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-[#FCD34D]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-gray-800 text-gray-400 text-sm">
+              <th className="p-4 font-medium">Rider Name</th>
+              <th className="p-4 font-medium">Contact</th>
+              <th className="p-4 font-medium">Status</th>
+              <th className="p-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr><td colSpan={4} className="p-8 text-center text-gray-500">Loading riders...</td></tr>
+            ) : filteredRiders.length === 0 ? (
+              <tr><td colSpan={4} className="p-8 text-center text-gray-500">No riders found.</td></tr>
+            ) : filteredRiders.map((rider: any) => (
+              <tr key={rider.id} className="border-b border-gray-800/50 hover:bg-[#222] transition-colors">
+                <td className="p-4 font-medium">{rider.name}</td>
+                <td className="p-4 text-gray-400">{rider.phone}</td>
+                <td className="p-4">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    rider.riderProfile?.verificationStatus === 'APPROVED' ? 'bg-green-500/20 text-green-500' :
+                    rider.riderProfile?.verificationStatus === 'REJECTED' ? 'bg-red-500/20 text-red-500' :
+                    'bg-yellow-500/20 text-yellow-500'
+                  }`}>
+                    {rider.riderProfile?.verificationStatus || 'PENDING'}
+                  </span>
+                </td>
+                <td className="p-4 text-right">
+                  <button 
+                    onClick={() => setSelectedRider(rider)}
+                    className="bg-[#0a0a0a] border border-gray-700 hover:border-[#FCD34D] text-white px-4 py-2 rounded-lg text-sm transition-all"
+                  >
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Rider Details Modal */}
+      {selectedRider && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#111] border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-800 flex justify-between items-center sticky top-0 bg-[#111] z-10">
+              <h2 className="text-xl font-bold">Rider Details</h2>
+              <button onClick={() => setSelectedRider(null)} className="text-gray-400 hover:text-white">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-8">
+              {/* IDENTITY & CONTACT */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><User size={16}/> Identity & Contact</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Full Name</p>
+                    <p className="font-medium">{selectedRider.name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Phone</p>
+                    <p className="font-medium">{selectedRider.phone || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">National ID</p>
+                    <p className="font-medium">{selectedRider.riderProfile?.nationalId || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Emergency Contact</p>
+                    <p className="font-medium">{selectedRider.riderProfile?.emergencyContact || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* MOTORCYCLE */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><Bike size={16}/> Motorcycle</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Make & Model</p>
+                    <p className="font-medium">{selectedRider.riderProfile?.bikeModel || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Color</p>
+                    <p className="font-medium">{selectedRider.riderProfile?.bikeColor || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Registration</p>
+                    <p className="font-medium">{selectedRider.riderProfile?.plateNumber || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* DOCUMENTS SECTION */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><FileText size={16}/> Uploaded Documents</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Driver's License</p>
+                    {selectedRider.riderProfile?.driversLicenseUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.driversLicenseUrl} alt="License" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Insurance</p>
+                    {selectedRider.riderProfile?.insuranceUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.insuranceUrl} alt="Insurance" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Bike Photo</p>
+                    {selectedRider.riderProfile?.bikePictureUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.bikePictureUrl} alt="Bike" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Selfie</p>
+                    {selectedRider.riderProfile?.passportPhotoUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.passportPhotoUrl} alt="Selfie" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-800 bg-[#111] flex flex-wrap justify-end gap-3 rounded-b-xl sticky bottom-0">
+              <button onClick={() => { const reason = prompt("Reason:"); if(reason) rejectMutation.mutate({ userId: selectedRider.id, reason }); }} className="px-4 py-2 bg-red-500/10 text-red-500 font-semibold rounded-lg hover:bg-red-500/20 transition-colors">
+                Reject
+              </button>
+              <button onClick={() => { const pass = prompt("Enter new password:"); if(pass) resetPasswordMutation.mutate({ userId: selectedRider.id, password: pass }); }} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors">
+                <Key size={16}/> Reset Password
+              </button>
+              <button onClick={() => approveMutation.mutate(selectedRider.id)} disabled={selectedRider.riderProfile?.verificationStatus === 'APPROVED'} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50 transition-colors">
+                <CheckCircle2 size={18}/>
+                {selectedRider.riderProfile?.verificationStatus === 'APPROVED' ? 'Approved' : 'Approve Rider'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
