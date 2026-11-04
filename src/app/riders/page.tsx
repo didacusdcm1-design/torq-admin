@@ -225,26 +225,26 @@ export default function RidersPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Driver's License</p>
-                    {selectedRider.riderProfile?.driversLicenseUrl ? (
-                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.driversLicenseUrl} alt="License" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    {selectedRider.riderProfile?.licenseDocUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.licenseDocUrl} alt="License" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
                     ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Insurance</p>
-                    {selectedRider.riderProfile?.insuranceUrl ? (
-                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.insuranceUrl} alt="Insurance" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    {selectedRider.riderProfile?.insuranceDocUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.insuranceDocUrl} alt="Insurance" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
                     ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Bike Photo</p>
-                    {selectedRider.riderProfile?.bikePictureUrl ? (
-                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.bikePictureUrl} alt="Bike" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    {selectedRider.riderProfile?.bikePhotoUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.bikePhotoUrl} alt="Bike" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
                     ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Selfie</p>
-                    {selectedRider.riderProfile?.passportPhotoUrl ? (
-                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.passportPhotoUrl} alt="Selfie" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
+                    {selectedRider.riderProfile?.selfieUrl ? (
+                      <img src={"https://torq-backend.onrender.com/" + selectedRider.riderProfile.selfieUrl} alt="Selfie" className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80" onClick={(e) => window.open(e.currentTarget.src, "_blank")} />
                     ) : <div className="h-32 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-gray-500 border border-gray-800">No Image</div>}
                   </div>
                 </div>
