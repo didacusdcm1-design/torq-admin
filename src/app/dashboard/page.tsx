@@ -1,4 +1,5 @@
 ﻿"use client";
+import 'leaflet/dist/leaflet.css';
 
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -147,7 +148,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           
           {/* Map Card */}
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm lg:col-span-2">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm lg:col-span-2 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-gray-900">Live Trips</h2>
@@ -158,7 +159,7 @@ export default function DashboardPage() {
               <button className="text-sm text-blue-600 hover:underline">View full map →</button>
             </div>
             
-            <div className="h-[350px] w-full rounded-lg overflow-hidden border border-gray-100 relative z-0">
+            <div className="flex-1 min-h-[400px] w-full rounded-lg overflow-hidden border border-gray-100 relative z-0">
               {isMounted && (
                 <MapContainer center={[-1.286389, 36.817223]} zoom={11} style={{ height: '100%', width: '100%' }}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
