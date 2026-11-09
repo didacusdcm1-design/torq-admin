@@ -13,21 +13,19 @@ const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.Map
 const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
 
-const mockPieData = [
-  { name: 'Completed', value: 606, color: '#10b981' },
-  { name: 'In Progress', value: 135, color: '#3b82f6' },
-  { name: 'Pending', value: 59, color: '#f59e0b' },
-  { name: 'Cancelled', value: 42, color: '#ef4444' },
-];
+const API_URL = "https://torq-backend.onrender.com/api/admin/dashboard";
 
-const mockBarData = [
-  { name: 'Apr 19', revenue: 350 }, { name: 'Apr 20', revenue: 400 },
-  { name: 'Apr 21', revenue: 450 }, { name: 'Apr 22', revenue: 380 },
-  { name: 'Apr 23', revenue: 480 }, { name: 'Apr 24', revenue: 520 },
-  { name: 'Apr 25', revenue: 600 },
+// Define fallback data just in case the API is loading or fails
+const fallbackPieData = [
+  { name: 'Completed', value: 0, color: '#10b981' },
+  { name: 'In Progress', value: 0, color: '#3b82f6' },
+  { name: 'Pending', value: 0, color: '#f59e0b' },
+  { name: 'Cancelled', value: 0, color: '#ef4444' },
 ];
 
 export default function DashboardPage() {
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [lastUpdated, setLastUpdated] = useState("");
 
@@ -37,8 +35,34 @@ export default function DashboardPage() {
     const interval = setInterval(() => {
       setLastUpdated(new Date().toLocaleTimeString('en-US'));
     }, 30000);
+
+    // Fetch API Data
+    async function fetchDashboardData() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        setDashboardData(data);
+        setLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        setLoading(false);
+      }
+    }
+    fetchDashboardData();
+
     return () => clearInterval(interval);
   }, []);
+
+  // Prepare pie chart data from API (fallback if loading/error)
+  const pieData = dashboardData ? [
+    { name: 'Completed', value: dashboardData.tripStatus.completed, color: '#10b981' },
+    { name: 'In Progress', value: dashboardData.tripStatus.inProgress, color: '#3b82f6' },
+    { name: 'Pending', value: dashboardData.tripStatus.pending, color: '#f59e0b' },
+    { name: 'Cancelled', value: dashboardData.tripStatus.cancelled, color: '#ef4444' },
+  ] : fallbackPieData;
+
+  // Total for percentage calculation
+  const totalTrips = pieData.reduce((acc, curr) => acc + curr.value, 0) || 1;
 
   return (
     <DashboardLayout>
@@ -61,46 +85,60 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards - NOW USING REAL DATA */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Bike size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Total Trips (Today)</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {loading ? "..." : dashboardData?.stats?.totalTrips || 0}
+            </div>
             <div className="text-xs text-green-500 mt-1">↑ 12% vs yesterday</div>
           </div>
+          
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Bike size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Active Riders</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">3</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {loading ? "..." : dashboardData?.stats?.activeRiders || 0}
+            </div>
             <div className="text-xs text-green-500 mt-1">↑ 8% vs yesterday</div>
           </div>
+          
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Users size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Active Customers</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">1</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {loading ? "..." : dashboardData?.stats?.activeCustomers || 0}
+            </div>
             <div className="text-xs text-green-500 mt-1">↑ 15% vs yesterday</div>
           </div>
+          
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Wallet size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Total Revenue (Today)</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {loading ? "..." : dashboardData?.stats?.totalRevenue || 0}
+            </div>
             <div className="text-xs text-green-500 mt-1">↑ 18% vs yesterday</div>
           </div>
+          
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#FCD34D] rounded-lg text-black"><Star size={20}/></div>
               <span className="text-sm text-gray-500 font-medium">Average Rating</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">4.7</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {loading ? "..." : dashboardData?.stats?.averageRating || 0}
+            </div>
             <div className="text-xs text-green-500 mt-1">↑ 2% vs last week</div>
           </div>
         </div>
@@ -130,14 +168,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Trip Status Chart */}
+          {/* Trip Status Chart - NOW USING REAL DATA */}
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <h2 className="font-bold text-gray-900 mb-4">Trip Status</h2>
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={mockPieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {mockPieData.map((entry, index) => (
+                  <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -145,13 +183,15 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
             <div className="space-y-2 mt-4">
-              {mockPieData.map((item) => (
+              {pieData.map((item) => (
                 <div key={item.name} className="flex justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
                     <span className="text-gray-600">{item.name}</span>
                   </div>
-                  <span className="text-gray-900 font-medium">{Math.round((item.value / 842) * 100)}% ({item.value})</span>
+                  <span className="text-gray-900 font-medium">
+                    {Math.round((item.value / totalTrips) * 100)}% ({item.value})
+                  </span>
                 </div>
               ))}
             </div>
@@ -169,11 +209,12 @@ export default function DashboardPage() {
           </div>
           <div className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockBarData}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+              {/* Using API data for the bar chart if available */}
+              <BarChart data={loading ? [] : dashboardData?.revenueChart || []}>
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
                 <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="revenue" fill="#FCD34D" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="amount" fill="#FCD34D" radius={[4, 4, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
