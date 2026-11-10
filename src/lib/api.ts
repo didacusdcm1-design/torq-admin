@@ -14,3 +14,15 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+export async function fetchRiders(params?: { page?: number; limit?: number; isOnline?: boolean }) {
+  const search = new URLSearchParams();
+  if (params?.page) search.set('page', String(params.page));
+  if (params?.limit) search.set('limit', String(params.limit));
+  if (params?.isOnline !== undefined) search.set('isOnline', String(params.isOnline));
+  
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+  const res = await fetch(`${base}/riders?${search.toString()}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Failed to fetch riders: ${res.status}`);
+  return res.json();
+}
