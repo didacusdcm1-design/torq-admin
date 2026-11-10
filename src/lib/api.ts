@@ -26,3 +26,21 @@ export async function fetchRiders(params?: { page?: number; limit?: number; isOn
   if (!res.ok) throw new Error(`Failed to fetch riders: ${res.status}`);
   return res.json();
 }
+
+export async function fetchPendingRiders() {
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+  const res = await fetch(`${base}/riders/pending`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateRiderStatus(id: string, status: 'APPROVED' | 'REJECTED') {
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+  const res = await fetch(`${base}/riders/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`Failed: ${res.status}`);
+  return res.json();
+}
